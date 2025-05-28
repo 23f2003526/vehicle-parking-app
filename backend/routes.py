@@ -5,7 +5,7 @@ from app import app
 from flask import jsonify, make_response, redirect, render_template, request, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from backend.models import User, db
+from backend.models import Role, User, db
 from backend.auth import token_required
 
 
@@ -42,9 +42,19 @@ def register():
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             return jsonify({'message': 'User already exists. Please login.'}), 400
+        
+        user_role = Role.query.filter_by(name='user').first()
+        if not user_role:
+            return jsonify({'message': 'User role not found in database'}), 500
 
         hashed_password = generate_password_hash(password)
-        new_user = User(public_id=str(uuid.uuid4()), name=name, email=email, password=hashed_password)
+        new_user = User(
+            public_id=str(uuid.uuid4()),
+            name=name,
+            email=email,
+            password=hashed_password,
+            role_id=user_role.id  # assign role_id here
+        )
 
         db.session.add(new_user)
         db.session.commit()
