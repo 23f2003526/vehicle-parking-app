@@ -1,0 +1,2 @@
+- complete models.py
+- make it so ki admin is created khud se
