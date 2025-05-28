@@ -23,7 +23,7 @@ def login():
         if not user or not check_password_hash(user.password, password):
             return jsonify({'message': 'Invalid email or password'}), 401
 
-        token = jwt.encode({'public_id': user.public_id, 'exp': datetime.now(timezone.utc) + timedelta(hours=1)}, app.config['SECRET_KEY'], algorithm="HS256")
+        token = jwt.encode({'public_id': user.public_id, 'exp': datetime.now(timezone.utc) + timedelta(hours=1), 'role_id':user.role_id}, app.config['SECRET_KEY'], algorithm="HS256")
 
         response = make_response(redirect(url_for('dashboard')))
         response.set_cookie('jwt_token', token)
