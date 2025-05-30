@@ -56,7 +56,7 @@ class ParkingSpot(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     spot_number = db.Column(db.String(20), nullable=False)
-    spot_type = db.Column(db.String(20), nullable=False)  # e.g., 'compact', 'large', 'EV'
+    spot_type = db.Column(db.String(20), nullable=True)  # e.g., 'compact', 'large', 'EV'
     is_occupied = db.Column(db.Boolean, default=False)
 
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lots.id'), nullable=False)

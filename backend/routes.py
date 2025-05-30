@@ -6,8 +6,9 @@ from flask import jsonify, make_response, redirect, render_template, request, ur
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 
-from backend.models import Role, User, db
-from backend.auth import token_required
+from backend.models import Role, User, db, ParkingSpot, ParkingLot
+from backend.auth import token_required, admin_required
+from backend.parsers import signup_parser, login_parser, lot_parser
 
 api = Api(app)
 
@@ -19,10 +20,6 @@ user_fields = {
     # 'password': fields.String,
 }
 
-signup_parser = reqparse.RequestParser()
-signup_parser.add_argument("name", type=str, help='Name of the user is required', required=True, location='json')
-signup_parser.add_argument("email", type=str, help='Email of the user is required', required=True, location='json')
-signup_parser.add_argument("password", type=str, help='Password of the user is required', required=True, location='json')
 
 class Signup(Resource):
     @marshal_with(user_fields)
@@ -52,10 +49,6 @@ class Signup(Resource):
             return response, 200
 
 api.add_resource(Signup, '/signup')
-
-login_parser = reqparse.RequestParser()
-login_parser.add_argument('email', type=str, help='This field cannot be empty', required=True, location='json')
-login_parser.add_argument('password', type=str, help='This field cannot be empty', required=True, location='json')
 
 
 class Login(Resource):
@@ -87,6 +80,9 @@ class Login(Resource):
     
 api.add_resource(Login, '/login')
 
+# class Logout(Resource):
+#     def get(self):
+#         return {}
 
 class Dashboard(Resource):
     @token_required
@@ -101,32 +97,97 @@ class Dashboard(Resource):
 
 api.add_resource(Dashboard, '/dashboard')
 
+class LotGetCreate(Resource):
+    @admin_required
+    def get(self):
+        lots = ParkingLot.query.all()
+        return [{
+            'id': lot.id,
+            'prime_location_name': lot.prime_location_name,
+            'address': lot.address,
+            'pin_code': lot.pin_code,
+            'price': lot.price,
+            'number_of_spots': lot.number_of_spots
+        } for lot in lots], 200
 
-# @app.route('/')
-# def home():
-#     return render_template('login.html')
+    @admin_required
+    def post(self):
+        args = lot_parser.parse_args()
 
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     if request.method == 'POST':
-#         email = request.form['email']
-#         password = request.form['password']
-#         user = User.query.filter_by(email=email).first()
+        if args['number_of_spots'] <= 0:
+            abort(400, message="Number of spots must be greater than 0")
 
-#         if not user or not check_password_hash(user.password, password):
-#             return jsonify({'message': 'Invalid email or password'}), 401
+        new_lot = ParkingLot(
+            prime_location_name = args['prime_location_name'],
+            address = args['address'],
+            price = args['price'],
+            pin_code = args['pin_code'],
+            number_of_spots = args['number_of_spots'],
+            )
+        db.session.add(new_lot)
+        db.session.commit()
 
-#         token = jwt.encode({'public_id': user.public_id, 'exp': datetime.now(timezone.utc) + timedelta(hours=1), 'role_id':user.role_id}, app.config['SECRET_KEY'], algorithm="HS256")
+        for i in range(1, args['number_of_spots'] + 1):
+            spot = ParkingSpot(
+                lot_id = new_lot.id,
+                is_occupied = False,
+                spot_number = i,
+                spot_type = "compact"
+            )
+            db.session.add(spot)
+        db.session.commit()
 
-#         response = make_response(redirect(url_for('dashboard')))
-#         response.set_cookie('jwt_token', token)
+        return {'message': 'Parking lot created successfully', 'lot_id': new_lot.id}, 201
 
-#         return response
+api.add_resource(LotGetCreate, '/admin/lots')  
 
-#     return render_template('login.html')
+class LotUpdateDelete(Resource):
+    @admin_required
+    def put(self, lot_id):
+        args = lot_parser.parse_args()
+        lot = ParkingLot.query.get_or_404(lot_id)
 
+        if args['prime_location_name']: lot.prime_location_name = args['prime_location_name']
+        if args['address']: lot.address = args['address']
+        if args['pin_code']: lot.pin_code = args['pin_code']
+        if args['price']: lot.price = args['price']
 
-# @app.route('/dashboard')
-# @token_required
-# def dashboard(current_user):
-#     return render_template('index.html')
+        # do the following only when all parking spots in the current parking lot are empty
+        occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
+        if occupied_spots > 0:
+            abort(400, message="Cannot update lot with occupied spots")
+
+        if args['number_of_spots'] and args['number_of_spots'] != lot.number_of_spots:            
+            lot.number_of_spots = args['number_of_spots']
+           
+            spots = ParkingSpot.query.filter_by(lot_id=lot.id).all()
+            for spot in spots:
+                db.session.delete(spot)
+            
+            for i in range(1, args['number_of_spots'] + 1):
+                spot = ParkingSpot(
+                    lot_id = lot.id,
+                    is_occupied = False,
+                    spot_number = i,
+                    spot_type = "compact"
+                )
+                db.session.add(spot)
+
+        db.session.commit()
+        return {'message': f'Parking lot updated successfully with {lot.number_of_spots} number of spots'}, 200
+
+    @admin_required
+    def delete(self, lot_id):
+        lot = ParkingLot.query.get(lot_id)
+        if not lot:
+            abort(404, message="Parking lot not found")
+
+        # Ensure all spots are unoccupied
+        occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
+        if occupied_spots > 0:
+            abort(400, message="Cannot delete lot with occupied spots")
+        db.session.delete(lot)
+        db.session.commit()
+        return {'message': 'Parking lot deleted successfully'}, 200
+    
+api.add_resource(LotUpdateDelete, '/admin/lots/<int:lot_id>')
