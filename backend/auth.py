@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import jsonify, request, current_app
+from flask import jsonify, request, current_app, g
 import jwt
 
 from backend.models import User
@@ -15,11 +15,17 @@ def token_required(f):
         try:
             secret_key = current_app.config['SECRET_KEY']
             data = jwt.decode(token, secret_key, algorithms=["HS256"])
+
             current_user = User.query.filter_by(public_id=data['public_id'], role_id=data['role_id']).first()
+            
+            if not current_user:
+                return jsonify({'message':'Token is invalid'}), 404
+            
+            g.current_user = current_user
         except Exception as e:
             print(f"Token error: {e}")
             return jsonify({'message': 'Token is invalid!'}), 401
 
-        return f(current_user, *args, **kwargs)
+        return f(*args, **kwargs)
 
     return decorated

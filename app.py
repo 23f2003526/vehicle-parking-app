@@ -1,4 +1,6 @@
 from flask import Flask
+from flask_cors import CORS
+
 # from flask_sqlalchemy import SQLAlchemy
 # import jwt
 # import uuid
@@ -11,6 +13,9 @@ from backend.models import Role, db, User
 def createApp():
     app = Flask(__name__, template_folder='frontend')
     app.config.from_object(LocalDevelopmentConfig)
+    CORS(app)
+
+    # api = Api(app)
 
     db.init_app(app)
 
