@@ -16,3 +16,8 @@ lot_parser.add_argument('address', type=str, help='This field cannot be empty', 
 lot_parser.add_argument('pin_code', type=int, help='This field cannot be empty', required=True, location='json')
 lot_parser.add_argument('price', type=int, help='This field cannot be empty', required=True, location='json')
 lot_parser.add_argument('number_of_spots', type=int, help='This field cannot be empty', required=True, location='json')
+
+
+spot_update_parser = reqparse.RequestParser()
+spot_update_parser.add_argument("spot_type", type=str, required=False)
+spot_update_parser.add_argument("is_occupied", type=bool, required=False)

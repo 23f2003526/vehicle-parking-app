@@ -8,9 +8,9 @@ from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 
 from backend.models import Role, User, db, ParkingSpot, ParkingLot
 from backend.auth import token_required, admin_required
-from backend.parsers import signup_parser, login_parser, lot_parser
+from backend.parsers import signup_parser, login_parser, lot_parser, spot_update_parser
 
-api = Api(app)
+# api = Api(app)
 
 user_fields = {
     'public_id': fields.String,
@@ -48,7 +48,7 @@ class Signup(Resource):
             response = {"public_id": new_user.public_id, "name": new_user.name, "email":new_user.email, "role_id":new_user.role_id}
             return response, 200
 
-api.add_resource(Signup, '/signup')
+# api.add_resource(Signup, '/signup')
 
 
 class Login(Resource):
@@ -78,7 +78,7 @@ class Login(Resource):
         )
         return response
     
-api.add_resource(Login, '/login')
+# api.add_resource(Login, '/login')
 
 # class Logout(Resource):
 #     def get(self):
@@ -95,7 +95,7 @@ class Dashboard(Resource):
             "role": current_user.role.name
         }, 200
 
-api.add_resource(Dashboard, '/dashboard')
+# api.add_resource(Dashboard, '/dashboard')
 
 class LotGetCreate(Resource):
     @admin_required
@@ -116,6 +116,10 @@ class LotGetCreate(Resource):
 
         if args['number_of_spots'] <= 0:
             abort(400, message="Number of spots must be greater than 0")
+
+        existing_lot = ParkingLot.query.filter_by(address=args['address']).first()
+        if existing_lot:
+            abort(400, message="A parking lot already exists at this address.")
 
         new_lot = ParkingLot(
             prime_location_name = args['prime_location_name'],
@@ -139,9 +143,21 @@ class LotGetCreate(Resource):
 
         return {'message': 'Parking lot created successfully', 'lot_id': new_lot.id}, 201
 
-api.add_resource(LotGetCreate, '/admin/lots')  
+# api.add_resource(LotGetCreate, '/admin/lots')  
 
 class LotUpdateDelete(Resource):
+    @admin_required
+    def get(self, lot_id):
+        lot = ParkingLot.query.get_or_404(lot_id)
+        return {
+            'id': lot.id,
+            'prime_location_name': lot.prime_location_name,
+            'address': lot.address,
+            'pin_code': lot.pin_code,
+            'price': lot.price,
+            'number_of_spots': lot.number_of_spots
+        }, 200
+
     @admin_required
     def put(self, lot_id):
         args = lot_parser.parse_args()
@@ -159,7 +175,8 @@ class LotUpdateDelete(Resource):
 
         if args['number_of_spots'] and args['number_of_spots'] != lot.number_of_spots:            
             lot.number_of_spots = args['number_of_spots']
-           
+            
+            # how to optimize this ?
             spots = ParkingSpot.query.filter_by(lot_id=lot.id).all()
             for spot in spots:
                 db.session.delete(spot)
@@ -174,7 +191,7 @@ class LotUpdateDelete(Resource):
                 db.session.add(spot)
 
         db.session.commit()
-        return {'message': f'Parking lot updated successfully with {lot.number_of_spots} number of spots'}, 200
+        return {'message': f'Parking lot {lot.prime_location_name} updated successfully with {lot.number_of_spots} number of spots'}, 200
 
     @admin_required
     def delete(self, lot_id):
@@ -190,4 +207,82 @@ class LotUpdateDelete(Resource):
         db.session.commit()
         return {'message': 'Parking lot deleted successfully'}, 200
     
-api.add_resource(LotUpdateDelete, '/admin/lots/<int:lot_id>')
+# api.add_resource(LotUpdateDelete, '/admin/lots/<int:lot_id>')
+
+class LotSummary(Resource):
+    @admin_required
+    def get(self, lot_id):
+        lot = ParkingLot.query.get_or_404(lot_id)
+
+        total_spots = len(lot.spots)
+        occupied_spots = ParkingSpot.query.filter_by(lot_id=lot_id, is_occupied=True).count()
+        available_spots = total_spots - occupied_spots
+
+        spots = ParkingSpot.query.filter_by(lot_id=lot_id).all()
+
+        return{
+            "lot_id": lot.id,
+            "prime_location_name": lot.prime_location_name,
+            "address": lot.address,
+            "pin_code": lot.pin_code,
+            "price": lot.price,
+            "number_of_spots": total_spots,
+            "occupied_spots": occupied_spots,
+            "available_spots": available_spots,
+            "spots": [
+                {
+                    'spot_id': spot.id,
+                    'spot_number': spot.spot_number,
+                    'spot_type': spot.spot_type,
+                    'is_occupied': spot.is_occupied
+                } for spot in spots
+            ]
+        }, 200
+    
+# api.add_resource(LotSummary, '/admin/lots/<int:lot_id>/summary')
+
+    
+class SpotResource(Resource):
+    @admin_required
+    def get(self, lot_id, spot_number):
+        spot = ParkingSpot.query.filter_by(lot_id=lot_id, spot_number=spot_number).first()
+        if not spot:
+            abort(404, message="Parking spot not found")
+        return {
+            "id": spot.id,
+            "spot_number": spot.spot_number,
+            "spot_type": spot.spot_type,
+            "is_occupied": spot.is_occupied
+        }, 200
+    
+    @admin_required
+    def delete(self, lot_id, spot_number):
+        spot = ParkingSpot.query.filter_by(lot_id=lot_id, spot_number=spot_number).first()
+        if not spot:
+            abort(404, message="Parking spot not found")
+
+        if spot.is_occupied:
+            abort(400, message="Cannot delete an occupied spot")
+        
+        db.session.delete(spot)
+        db.session.commit()
+        return {'message': 'Spot deleted successfully'}, 200
+    
+    @admin_required
+    def put(self, lot_id, spot_number):
+        spot = ParkingSpot.query.filter_by(lot_id=lot_id, spot_number=spot_number).first()
+        if not spot:
+            abort(404, message="Parking spot not found")
+
+        args = spot_update_parser.parse_args()
+        if args["spot_type"]:
+            spot.spot_type = args["spot_type"]
+        if args["is_occupied"] is not None:
+            spot.is_occupied = args["is_occupied"]
+
+        db.session.commit()
+        return {"message": "Spot updated successfully"}, 200
+    
+# api.add_resource(SpotResource, '/admin/lots/<int:lot_id>/spots/<int:spot_number>')
+
+# WHAT's LEFT :: Admin should be able to see list of all users and their details. (username, spot used, reservation history etc.)

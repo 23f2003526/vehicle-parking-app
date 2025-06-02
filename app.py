@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-
+from flask_migrate import Migrate
 # from flask_sqlalchemy import SQLAlchemy
 # import jwt
 # import uuid
@@ -13,11 +13,12 @@ from backend.models import Role, db, User
 def createApp():
     app = Flask(__name__, template_folder='frontend')
     app.config.from_object(LocalDevelopmentConfig)
-    CORS(app)
+    CORS(app, supports_credentials=True)
 
     # api = Api(app)
 
     db.init_app(app)
+    migrate = Migrate(app, db)
 
     with app.app_context():
         db.create_all()
@@ -50,7 +51,7 @@ def createApp():
 
 app = createApp()
 
-from backend.routes import *
+from backend.api import *
 
 if __name__ == '__main__':
     app.run()
