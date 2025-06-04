@@ -4,6 +4,7 @@ import LandingPageView from '@/views/LandingPageView.vue';
 import SignupView from '@/views/SignupView.vue';
 import NotFoundView from '@/views/NotFoundView.vue';
 import DashboardView from '@/views/DashboardView.vue';
+import ParkingLotView from '@/views/ParkingLotView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,6 +33,13 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
+      meta: { requiresAuth: true}
+    },
+    {
+      path: '/admin/lots/:id',
+      name: 'parking-lot-view',
+      component: ParkingLotView,
+      meta: { requiresAuth: true}
     },
   ],
 })

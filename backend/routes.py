@@ -101,14 +101,25 @@ class LotGetCreate(Resource):
     @admin_required
     def get(self):
         lots = ParkingLot.query.all()
-        return [{
-            'id': lot.id,
-            'prime_location_name': lot.prime_location_name,
-            'address': lot.address,
-            'pin_code': lot.pin_code,
-            'price': lot.price,
-            'number_of_spots': lot.number_of_spots
-        } for lot in lots], 200
+
+        lot_list = []
+        for lot in lots:
+            total_spots = len(lot.spots)
+            occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
+            available_spots = total_spots - occupied_spots
+
+            lot_list.append({
+                'id': lot.id,
+                'prime_location_name': lot.prime_location_name,
+                'address': lot.address,
+                'pin_code': lot.pin_code,
+                'price': lot.price,
+                'number_of_spots': total_spots,
+                'occupied_spots': occupied_spots,
+                'available_spots': available_spots
+            })
+
+        return lot_list, 200
 
     @admin_required
     def post(self):
