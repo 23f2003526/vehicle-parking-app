@@ -5,6 +5,8 @@ import SignupView from '@/views/SignupView.vue';
 import NotFoundView from '@/views/NotFoundView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import ParkingLotView from '@/views/ParkingLotView.vue';
+import CreateParkingLotView from '@/views/CreateParkingLotView.vue';
+import EditParkingLotView from '@/views/EditParkingLotView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,6 +41,18 @@ const router = createRouter({
       path: '/admin/lots/:id',
       name: 'parking-lot-view',
       component: ParkingLotView,
+      meta: { requiresAuth: true}
+    },
+    {
+      path: '/admin/lots/create',
+      name: 'create-parking-lot-view',
+      component: CreateParkingLotView,
+      meta: { requiresAuth: true}
+    },
+    {
+      path: '/admin/lots/:id/edit',
+      name: 'edit-parking-lot-view',
+      component: EditParkingLotView,
       meta: { requiresAuth: true}
     },
   ],
