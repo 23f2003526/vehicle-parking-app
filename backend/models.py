@@ -36,7 +36,7 @@ class Vehicle(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    reservations = db.relationship('Reservation', backref='vehicle', lazy=True)
+    reservations = db.relationship('Booking', backref='vehicle', lazy=True)
 
 class ParkingLot(db.Model):
     __tablename__ = 'parking_lots'
@@ -61,10 +61,10 @@ class ParkingSpot(db.Model):
 
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lots.id'), nullable=False)
 
-    reservations = db.relationship('Reservation', backref='spot', lazy=True)
+    reservations = db.relationship('Booking', backref='spot', lazy=True)
 
-class Reservation(db.Model):
-    __tablename__ = 'reservations'
+class Booking(db.Model):
+    __tablename__ = 'booking'
 
     id = db.Column(db.Integer, primary_key=True)
     start_time = db.Column(db.DateTime, nullable=False)

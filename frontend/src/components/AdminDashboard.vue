@@ -20,7 +20,7 @@ onMounted(async () => {
 })
 
 function goToLot(id) {
-    router.push(`/admin/lots/${id}`)
+    router.push(`/lots/${id}`)
 }
 </script>
 

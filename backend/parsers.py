@@ -21,3 +21,7 @@ lot_parser.add_argument('number_of_spots', type=int, help='This field cannot be 
 spot_update_parser = reqparse.RequestParser()
 spot_update_parser.add_argument("spot_type", type=str, required=False)
 spot_update_parser.add_argument("is_occupied", type=bool, required=False)
+
+vehicle_parser = reqparse.RequestParser()
+vehicle_parser.add_argument('license_plate', type=str, required=True, help="License plate is required.")
+vehicle_parser.add_argument('vehicle_type', type=str, required=True, help="Vehicle type is required.")

@@ -90,59 +90,13 @@ const handleSubmit = async () => {
 };
 </script>
 
-<!-- <template>
-
-    <div class="signup-container">
-        <h2>Edit Parking Lot</h2>
-        <form @submit.prevent="handleSubmit" class="signup-form">
-            <div class="form-group">
-                <label for="prime_location_name">Prime Location Name</label>
-                <input id="prime_location_name" v-model="form.prime_location_name" type="text"
-                    placeholder="Enter Prime Location Name" :disabled="loading" />
-            </div>
-
-            <div class="form-group">
-                <label for="address">Address</label>
-                <input id="address" v-model="form.address" type="text" placeholder="Enter Address"
-                    :disabled="loading" />
-            </div>
-
-            <div class="form-group">
-                <label for="pincode">PIN Code</label>
-                <input id="pincode" v-model="form.pin_code" type="text" maxlength="6"
-                    placeholder="Enter 6-digit PIN code" :disabled="loading" />
-            </div>
-
-            <div class="form-group">
-                <label for="price">Price per hour</label>
-                <input id="price" v-model="form.price" type="number" step="1" min="0" placeholder="Enter price"
-                    :disabled="loading" />
-            </div>
-
-            <div class="form-group">
-                <label for="number_of_spots">Number of spots</label>
-                <input id="number_of_spots" v-model="form.number_of_spots" type="number" min="1"
-                    placeholder="Enter number of spots" :disabled="loading" />
-            </div>
-
-            <button type="submit" class="submit-btn" :disabled="loading">
-                {{ loading ? 'Editing...' : 'Edit Parking Lot' }}
-            </button>
-        </form>
-    </div>
-</template>
-
-<style scoped></style> -->
-
 <template>
     <div class="edit-container">
-        <!-- Loading spinner for initial data fetch -->
         <div v-if="initialLoading" class="loading-spinner">
             <div class="spinner"></div>
             <p>Loading parking lot data...</p>
         </div>
 
-        <!-- Main form -->
         <div v-else class="form-wrapper">
             <div class="header">
                 <h2>Edit Parking Lot</h2>

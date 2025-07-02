@@ -1,5 +1,7 @@
 # TO DO
 
+- HAVE TO WORK ON PARKING LOT VIEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 - Make it so that user can search for parking lot location wise.
 
 - complete models.py
@@ -16,3 +18,5 @@
   View parking lot details and spot status/summary.
   Automatically create parking spots based on the maximum capacity of the lot.
   View/delete parking spots (only if empty).
+
+### I am now using Pinia.

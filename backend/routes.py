@@ -6,9 +6,9 @@ from flask import jsonify, make_response, redirect, render_template, request, ur
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 
-from backend.models import Role, User, db, ParkingSpot, ParkingLot
+from backend.models import Booking, Role, User, Vehicle, db, ParkingSpot, ParkingLot
 from backend.auth import token_required, admin_required
-from backend.parsers import signup_parser, login_parser, lot_parser, spot_update_parser
+from backend.parsers import signup_parser, login_parser, lot_parser, spot_update_parser, vehicle_parser
 
 # api = Api(app)
 
@@ -221,7 +221,7 @@ class LotUpdateDelete(Resource):
 # api.add_resource(LotUpdateDelete, '/admin/lots/<int:lot_id>')
 
 class LotSummary(Resource):
-    @admin_required
+    @token_required
     def get(self, lot_id):
         lot = ParkingLot.query.get_or_404(lot_id)
 
@@ -252,7 +252,6 @@ class LotSummary(Resource):
     
 # api.add_resource(LotSummary, '/admin/lots/<int:lot_id>/summary')
 
-    
 class SpotResource(Resource):
     @admin_required
     def get(self, lot_id, spot_number):
@@ -297,3 +296,209 @@ class SpotResource(Resource):
 # api.add_resource(SpotResource, '/admin/lots/<int:lot_id>/spots/<int:spot_number>')
 
 # WHAT's LEFT :: Admin should be able to see list of all users and their details. (username, spot used, reservation history etc.)
+
+class VehicleResource(Resource):
+    @token_required
+    def get(self):
+        current_user = g.current_user
+        vehicles = Vehicle.query.filter_by(user_id=current_user.id).all()
+
+        return [{
+            'id': v.id,
+            'license_plate': v.license_plate,
+            'vehicle_type': v.vehicle_type
+        } for v in vehicles], 200
+
+    @token_required
+    def post(self):
+        current_user = g.current_user
+        # data = VehicleResource.vehicle_parser.parse_args()
+        req_args = vehicle_parser.parse_args()
+        license_plate = req_args["license_plate"]
+        vehicle_type = req_args["vehicle_type"]
+
+        if Vehicle.query.filter_by(license_plate=license_plate).first():
+            abort(400, message="A vehicle with this license plate already exists.")
+
+        vehicle = Vehicle(
+            license_plate=license_plate,
+            vehicle_type=vehicle_type,
+            user_id=current_user.id
+        )
+
+        db.session.add(vehicle)
+        db.session.commit()
+
+        return {"message": "Vehicle registered successfully.", "vehicle_id": vehicle.id}, 201
+
+    @token_required
+    def put(self):
+        current_user = g.current_user
+        data = vehicle_parser.copy()
+        data.add_argument('vehicle_id', type=int, required=True, help="Vehicle ID is required to update.")
+        args = data.parse_args()
+
+        vehicle = Vehicle.query.filter_by(id=args['vehicle_id'], user_id=current_user.id).first()
+        if not vehicle:
+            abort(404, message="Vehicle not found or not owned by user.")
+
+        vehicle.license_plate = args['license_plate']
+        vehicle.vehicle_type = args['vehicle_type']
+        db.session.commit()
+
+        return {"message": "Vehicle updated successfully."}, 200
+
+    @token_required
+    def delete(self):
+        current_user = g.current_user
+
+        parser = reqparse.RequestParser()
+        parser.add_argument('vehicle_id', type=int, required=True, help="Vehicle ID is required to delete.")
+        args = parser.parse_args()
+
+        vehicle = Vehicle.query.filter_by(id=args['vehicle_id'], user_id=current_user.id).first()
+        if not vehicle:
+            abort(404, message="Vehicle not found or not owned by user.")
+
+        db.session.delete(vehicle)
+        db.session.commit()
+
+        return {"message": "Vehicle deleted successfully."}, 200 
+
+class BookingResource(Resource):
+    @token_required
+    def get(self):
+        current_user = g.current_user
+
+        # Fetch all vehicles owned by user
+        user_vehicle_ids = [v.id for v in current_user.vehicles]
+
+        # Fetch bookings for these vehicles
+        bookings = Booking.query.filter(Booking.vehicle_id.in_(user_vehicle_ids)).all()
+
+        result = []
+        for b in bookings:
+            result.append({
+                "id": b.id,
+                "start_time": b.start_time.isoformat(),
+                "end_time": b.end_time.isoformat(),
+                "vehicle_id": b.vehicle_id,
+                "spot_id": b.spot_id,
+                "created_at": b.created_at.isoformat()
+            })
+
+        return result, 200
+
+    @token_required
+    def post(self):
+        current_user = g.current_user
+        parser = reqparse.RequestParser()
+        parser.add_argument('vehicle_id', type=int, required=True)
+        parser.add_argument('spot_id', type=int, required=True)
+        parser.add_argument('start_time', type=str, required=True)
+        parser.add_argument('end_time', type=str, required=True)
+        args = parser.parse_args()
+
+        # Parse datetime
+        try:
+            start_time = datetime.fromisoformat(args['start_time'])
+            end_time = datetime.fromisoformat(args['end_time'])
+        except ValueError:
+            abort(400, message="Invalid datetime format. Use ISO 8601.")
+
+        if end_time <= start_time:
+            abort(400, message="End time must be after start time.")
+
+        # Check vehicle belongs to user
+        vehicle = Vehicle.query.filter_by(id=args['vehicle_id'], user_id=current_user.id).first()
+        if not vehicle:
+            abort(403, message="Vehicle not found or not owned by user.")
+
+        # Check spot exists
+        spot = ParkingSpot.query.get(args['spot_id'])
+        if not spot:
+            abort(404, message="Parking spot not found.")
+
+        # Check overlapping reservations
+        overlapping = Booking.query.filter(
+            Booking.spot_id == spot.id,
+            Booking.end_time > start_time,
+            Booking.start_time < end_time
+        ).first()
+
+        if overlapping:
+            abort(409, message="This spot is already booked for the selected time.")
+
+        # Prevent same vehicle from double booking during overlapping time
+        vehicle_conflict = Booking.query.filter(
+            Booking.vehicle_id == vehicle.id,
+            Booking.end_time > start_time,
+            Booking.start_time < end_time
+        ).first()
+
+        if vehicle_conflict:
+            abort(409, message="This vehicle is already booked during this time.")
+
+        # Create booking
+        booking = Booking(
+            vehicle_id=vehicle.id,
+            spot_id=spot.id,
+            start_time=start_time,
+            end_time=end_time
+        )
+        # spot.is_occupied = True
+
+        db.session.add(booking)
+        db.session.commit()
+
+        return {
+            "message": "Booking successful.",
+            "booking_id": booking.id
+        }, 201
+
+    @token_required
+    def delete(self):
+        current_user = g.current_user
+        parser = reqparse.RequestParser()
+        parser.add_argument('booking_id', type=int, required=True)
+        args = parser.parse_args()
+
+        booking = Booking.query.get(args['booking_id'])
+        if not booking:
+            abort(404, message="Booking not found.")
+
+        # Check if this booking belongs to one of user's vehicles
+        if booking.vehicle.user_id != current_user.id:
+            abort(403, message="You are not authorized to delete this booking.")
+
+        db.session.delete(booking)
+        db.session.commit()
+
+        return {"message": "Booking cancelled successfully."}, 200
+
+
+class UserLotsResource(Resource):
+    @token_required
+    def get(self):
+        lots = ParkingLot.query.all() #tweak this later according to user preference
+
+        lot_list = []
+        for lot in lots:
+            total_spots = len(lot.spots)
+            occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
+            available_spots = total_spots - occupied_spots
+
+            lot_list.append({
+                'id': lot.id,
+                'prime_location_name': lot.prime_location_name,
+                'address': lot.address,
+                'pin_code': lot.pin_code,
+                'price': lot.price,
+                'number_of_spots': total_spots,
+                'occupied_spots': occupied_spots,
+                'available_spots': available_spots
+            })
+
+        return lot_list, 200
+    
+

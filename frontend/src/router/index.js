@@ -55,6 +55,12 @@ const router = createRouter({
       component: EditParkingLotView,
       meta: { requiresAuth: true}
     },
+    {
+      path: '/lots/:id',
+      name: 'parking-lot-view',
+      component: ParkingLotView,
+      meta: { requiresAuth: true}
+    },
   ],
 })
 
