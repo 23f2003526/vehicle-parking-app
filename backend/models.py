@@ -68,7 +68,7 @@ class Booking(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     start_time = db.Column(db.DateTime, nullable=False)
-    end_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
 
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'), nullable=False)
     spot_id = db.Column(db.Integer, db.ForeignKey('parking_spots.id'), nullable=False)

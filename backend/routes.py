@@ -369,11 +369,8 @@ class BookingResource(Resource):
     @token_required
     def get(self):
         current_user = g.current_user
-
-        # Fetch all vehicles owned by user
         user_vehicle_ids = [v.id for v in current_user.vehicles]
 
-        # Fetch bookings for these vehicles
         bookings = Booking.query.filter(Booking.vehicle_id.in_(user_vehicle_ids)).all()
 
         result = []
@@ -381,10 +378,17 @@ class BookingResource(Resource):
             result.append({
                 "id": b.id,
                 "start_time": b.start_time.isoformat(),
-                "end_time": b.end_time.isoformat(),
+                "end_time": b.end_time.isoformat() if b.end_time else None,
                 "vehicle_id": b.vehicle_id,
                 "spot_id": b.spot_id,
-                "created_at": b.created_at.isoformat()
+                "created_at": b.created_at.isoformat(),
+                "spot_number": b.spot.spot_number,
+                "spot_type": b.spot.spot_type,
+                "lot_id": b.spot.lot.id,
+                "location_name": b.spot.lot.prime_location_name,
+                "address": b.spot.lot.address,
+                "pin_code": b.spot.lot.pin_code,
+                "status": "active" if not b.end_time else "completed"
             })
 
         return result, 200
@@ -395,66 +399,47 @@ class BookingResource(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('vehicle_id', type=int, required=True)
         parser.add_argument('spot_id', type=int, required=True)
-        parser.add_argument('start_time', type=str, required=True)
-        parser.add_argument('end_time', type=str, required=True)
         args = parser.parse_args()
 
-        # Parse datetime
-        try:
-            start_time = datetime.fromisoformat(args['start_time'])
-            end_time = datetime.fromisoformat(args['end_time'])
-        except ValueError:
-            abort(400, message="Invalid datetime format. Use ISO 8601.")
+        start_time = datetime.utcnow()
 
-        if end_time <= start_time:
-            abort(400, message="End time must be after start time.")
-
-        # Check vehicle belongs to user
         vehicle = Vehicle.query.filter_by(id=args['vehicle_id'], user_id=current_user.id).first()
         if not vehicle:
             abort(403, message="Vehicle not found or not owned by user.")
 
-        # Check spot exists
         spot = ParkingSpot.query.get(args['spot_id'])
         if not spot:
             abort(404, message="Parking spot not found.")
 
-        # Check overlapping reservations
+        # Check for active overlapping booking on spot
         overlapping = Booking.query.filter(
             Booking.spot_id == spot.id,
-            Booking.end_time > start_time,
-            Booking.start_time < end_time
+            Booking.end_time == None
         ).first()
 
         if overlapping:
-            abort(409, message="This spot is already booked for the selected time.")
+            abort(409, message="This spot is already booked and active.")
 
-        # Prevent same vehicle from double booking during overlapping time
+        # Check if vehicle has any active booking
         vehicle_conflict = Booking.query.filter(
             Booking.vehicle_id == vehicle.id,
-            Booking.end_time > start_time,
-            Booking.start_time < end_time
+            Booking.end_time == None
         ).first()
 
         if vehicle_conflict:
-            abort(409, message="This vehicle is already booked during this time.")
+            abort(409, message="This vehicle already has an active booking.")
 
-        # Create booking
         booking = Booking(
             vehicle_id=vehicle.id,
             spot_id=spot.id,
             start_time=start_time,
-            end_time=end_time
+            end_time=None
         )
-        # spot.is_occupied = True
 
         db.session.add(booking)
         db.session.commit()
 
-        return {
-            "message": "Booking successful.",
-            "booking_id": booking.id
-        }, 201
+        return {"message": "Booking started successfully.", "booking_id": booking.id}, 201
 
     @token_required
     def delete(self):
@@ -467,7 +452,6 @@ class BookingResource(Resource):
         if not booking:
             abort(404, message="Booking not found.")
 
-        # Check if this booking belongs to one of user's vehicles
         if booking.vehicle.user_id != current_user.id:
             abort(403, message="You are not authorized to delete this booking.")
 
@@ -475,6 +459,30 @@ class BookingResource(Resource):
         db.session.commit()
 
         return {"message": "Booking cancelled successfully."}, 200
+
+
+class BookingReleaseResource(Resource):
+    @token_required
+    def patch(self, booking_id):
+        current_user = g.current_user
+        booking = Booking.query.get(booking_id)
+
+        if not booking:
+            abort(404, message="Booking not found.")
+
+        if booking.vehicle.user_id != current_user.id:
+            abort(403, message="You are not authorized to release this booking.")
+
+        if booking.end_time:
+            abort(400, message="This booking is already completed.")
+
+        booking.end_time = datetime.utcnow()
+        db.session.commit()
+
+        # You can also calculate total charge here based on duration
+
+        return {"message": "Booking released successfully.", "end_time": booking.end_time.isoformat()}, 200
+
 
 
 class UserLotsResource(Resource):

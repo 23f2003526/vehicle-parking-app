@@ -1,0 +1,149 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+import { useToast } from 'vue-toastification'
+
+const props = defineProps({
+    lot: Object,      // Lot details object (required)
+    spot: Object      // Spot details object (required)
+})
+
+const emit = defineEmits(['close', 'booked'])
+
+const toast = useToast()
+
+const vehicleList = ref([])
+const selectedVehicle = ref('')
+const isLoading = ref(false)
+const error = ref(null)
+
+onMounted(async () => {
+    try {
+        const res = await axios.get('/api/vehicles')
+        vehicleList.value = res.data
+    } catch (err) {
+        console.error(err)
+        error.value = 'Failed to load your vehicles.'
+    }
+})
+
+const handleBook = async () => {
+    if (!selectedVehicle.value) {
+        error.value = 'Please select your vehicle.'
+        return
+    }
+
+    isLoading.value = true
+    try {
+        await axios.post('/api/bookings', {
+            vehicle_id: parseInt(selectedVehicle.value),
+            spot_id: props.spot.id
+        })
+        toast.success('Booking started successfully.')
+        emit('booked')
+        emit('close')
+    } catch (err) {
+        console.error(err)
+        error.value = err.response?.data?.message || 'Booking failed.'
+    } finally {
+        isLoading.value = false
+    }
+}
+</script>
+
+<template>
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Book Spot at {{ lot.prime_location_name }}</h3>
+                <button class="close-btn" @click="emit('close')">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div v-if="error" class="error">{{ error }}</div>
+
+                <p><strong>Spot Number:</strong> {{ spot.spot_number }} ({{ spot.spot_type || 'Standard' }})</p>
+
+                <label for="vehicle">Select Your Vehicle:</label>
+                <select id="vehicle" v-model="selectedVehicle">
+                    <option disabled value="">-- Select Vehicle --</option>
+                    <option v-for="v in vehicleList" :key="v.id" :value="v.id">
+                        {{ v.license_plate }} ({{ v.vehicle_type }})
+                    </option>
+                </select>
+            </div>
+
+            <div class="modal-footer">
+                <button @click="emit('close')" class="btn btn-secondary">Cancel</button>
+                <button @click="handleBook" class="btn btn-primary" :disabled="isLoading">
+                    {{ isLoading ? 'Booking...' : 'Book Spot' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    width: 350px;
+    border-radius: 8px;
+    overflow: hidden;
+    animation: fadeIn 0.3s;
+}
+
+.modal-header {
+    background: #333;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 10px 15px;
+    border-top: 1px solid #ddd;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+select,
+button {
+    padding: 6px 10px;
+}
+
+.error {
+    color: red;
+    font-size: 0.9rem;
+}
+</style>

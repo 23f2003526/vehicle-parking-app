@@ -1,8 +1,6 @@
 # TO DO
 
-- HAVE TO WORK ON PARKING LOT VIEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-- Make it so that user can search for parking lot location wise.
+- In AvailableParkingLotsTable > openBookingModal is not working. Figure out a way how to automatically assign spot_id while booking. Fix what request frontend is sending to backend at /api/booking.
 
 - complete models.py
 - watch live session 3 from YT.
