@@ -61,7 +61,7 @@ class ParkingSpot(db.Model):
 
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lots.id'), nullable=False)
 
-    reservations = db.relationship('Booking', backref='spot', lazy=True)
+    reservations = db.relationship('Booking', back_populates='spot', lazy=True)
 
 class Booking(db.Model):
     __tablename__ = 'booking'
@@ -71,6 +71,8 @@ class Booking(db.Model):
     end_time = db.Column(db.DateTime, nullable=True)
 
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'), nullable=False)
-    spot_id = db.Column(db.Integer, db.ForeignKey('parking_spots.id'), nullable=False)
+    spot_id = db.Column(db.Integer, db.ForeignKey('parking_spots.id', ondelete='SET NULL'), nullable=True)
+
+    spot = db.relationship('ParkingSpot', back_populates='reservations')
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

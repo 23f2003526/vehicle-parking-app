@@ -4,7 +4,29 @@ defineProps({
 })
 
 const emit = defineEmits(['view-booking'])
+
+// Duration in hours and minutes
+function getDuration(start, end) {
+    const startTime = new Date(start)
+    const endTime = end ? new Date(end) : new Date()
+    const diffMs = endTime - startTime
+    const hours = Math.floor(diffMs / (1000 * 60 * 60))
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}m`
+}
+
+// Assuming price is per hour (pass it from backend with each booking)
+function getCost(start, end, pricePerHour) {
+    const startTime = new Date(start)
+    const endTime = end ? new Date(end) : new Date()
+    const diffHours = Math.ceil((endTime - startTime) / (1000 * 60 * 60))
+    // console.log(diffHours)
+    // console.log(pricePerHour);
+
+    return diffHours * pricePerHour
+}
 </script>
+
 
 <template>
     <div class="history-container">
@@ -19,6 +41,8 @@ const emit = defineEmits(['view-booking'])
                         <th>Vehicle No.</th>
                         <th>Start Time</th>
                         <th>End Time</th>
+                        <th>Duration</th>
+                        <th>Cost</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -33,6 +57,12 @@ const emit = defineEmits(['view-booking'])
                             {{ b.end_time
                                 ? new Date(b.end_time).toLocaleString('en-GB', { hour12: false })
                                 : 'Active' }}
+                        </td>
+                        <td>
+                            {{ getDuration(b.start_time, b.end_time) }}
+                        </td>
+                        <td>
+                            ₹{{ getCost(b.start_time, b.end_time, b.price) }}
                         </td>
                         <td>
                             <button v-if="!b.end_time" @click="emit('view-booking', b)" class="release-btn">

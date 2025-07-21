@@ -2,6 +2,8 @@
 
 - fix the delete and edit button disappearing issue when reloading in ParkingLotView.vue
 
+- add links so user can switch from login and signup
+
 - complete models.py
 - watch live session 3 from YT.
 

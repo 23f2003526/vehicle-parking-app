@@ -25,6 +25,13 @@ const totalCost = computed(() => {
     return hours * props.hourlyRate
 })
 
+const costBreakdown = computed(() => {
+    const start = new Date(props.booking.start_time)
+    const end = releaseTime.value
+    const hours = Math.ceil((end - start) / (1000 * 60 * 60))
+    return `${hours} hour(s) × ₹${props.hourlyRate} = ₹${hours * props.hourlyRate}`
+})
+
 const handleRelease = async () => {
     isLoading.value = true
     try {
@@ -57,6 +64,7 @@ const handleRelease = async () => {
                 <p><strong>Parking Start Time:</strong> {{ new Date(booking.start_time).toLocaleString() }}</p>
                 <p><strong>Release Time:</strong> {{ releaseTime.toLocaleString() }}</p>
                 <p><strong>Total Cost:</strong> ₹{{ totalCost }}</p>
+                <p><em>{{ costBreakdown }}</em></p>
             </div>
 
             <div class="modal-footer">

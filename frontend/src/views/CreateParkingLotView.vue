@@ -15,6 +15,7 @@ const form = reactive({
     price: '',
     number_of_spots: ''
 });
+
 const validateForm = () => {
     if (!form.prime_location_name.trim()) {
         toast.error('Prime location name is required');
@@ -41,8 +42,7 @@ const validateForm = () => {
 
 const handleSubmit = async () => {
     if (!validateForm()) return;
-
-    if (loading.value) return; // Prevent double submission
+    if (loading.value) return;
 
     loading.value = true;
 
@@ -57,7 +57,6 @@ const handleSubmit = async () => {
         toast.success(`Parking Lot created successfully! ID: ${response.data.lot_id}`);
 
         Object.keys(form).forEach(key => form[key] = '');
-
         router.push('/dashboard');
     } catch (error) {
         console.error(error);
@@ -67,48 +66,101 @@ const handleSubmit = async () => {
         loading.value = false;
     }
 };
-
 </script>
 
 <template>
     <div class="container">
-        <h2>Create New Parking Lot</h2>
-        <form @submit.prevent="handleSubmit" class="signup-form">
-            <div class="form-group">
-                <label for="prime_location_name">Prime Location Name</label>
-                <input id="prime_location_name" v-model="form.prime_location_name" type="text"
-                    placeholder="Prime Location Name" :disabled="loading" />
-            </div>
+        <form @submit.prevent="handleSubmit" class="form">
+            <h2>Create Parking Lot</h2>
 
-            <div class="form-group">
-                <label for="address">Address</label>
-                <input id="address" v-model="form.address" type="text" placeholder="Enter Address"
-                    :disabled="loading" />
-            </div>
+            <input v-model="form.prime_location_name" type="text" placeholder="Prime Location Name" :disabled="loading"
+                required />
 
-            <div class="form-group">
-                <label for="pincode">PIN Code</label>
-                <input id="pincode" v-model="form.pin_code" type="text" maxlength="6"
-                    placeholder="Enter 6-digit PIN code" :disabled="loading" />
-            </div>
+            <input v-model="form.address" type="text" placeholder="Address" :disabled="loading" required />
 
-            <div class="form-group">
-                <label for="price">Price per hour</label>
-                <input id="price" v-model="form.price" type="number" step="1" min="0" placeholder="Enter price"
-                    :disabled="loading" />
-            </div>
+            <input v-model="form.pin_code" type="text" maxlength="6" placeholder="PIN Code" :disabled="loading"
+                required />
 
-            <div class="form-group">
-                <label for="number_of_spots">Number of spots</label>
-                <input id="number_of_spots" v-model="form.number_of_spots" type="number" min="1"
-                    placeholder="Enter number of spots" :disabled="loading" />
-            </div>
+            <input v-model="form.price" type="number" step="1" min="0" placeholder="Price per hour" :disabled="loading"
+                required />
 
-            <button type="submit" class="submit-btn" :disabled="loading">
+            <input v-model="form.number_of_spots" type="number" min="1" placeholder="Number of spots"
+                :disabled="loading" required />
+
+            <button type="submit" :disabled="loading">
                 {{ loading ? 'Creating...' : 'Create Parking Lot' }}
             </button>
         </form>
     </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.container {
+    min-height: calc(100vh - 83px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    padding: 1rem;
+}
+
+.form {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-align: center;
+    color: #333;
+}
+
+input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+input:disabled {
+    background: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+button {
+    width: 100%;
+    padding: 0.75rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+button:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+</style>

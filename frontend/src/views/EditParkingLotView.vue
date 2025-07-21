@@ -7,10 +7,9 @@ import { useToast } from 'vue-toastification';
 const router = useRouter();
 const toast = useToast();
 const loading = ref(true);
-const route = useRoute()
+const route = useRoute();
 
-
-const id = route.params.id
+const id = route.params.id;
 
 const form = reactive({
     prime_location_name: '',
@@ -22,22 +21,21 @@ const form = reactive({
 
 onMounted(async () => {
     try {
-        const response = await axios.get(`/api/admin/lots/${id}`)
-        form.prime_location_name = response.data.prime_location_name
-        form.address = response.data.address
-        form.pin_code = response.data.pin_code
-        form.price = response.data.price
-        form.number_of_spots = response.data.number_of_spots
-
+        const response = await axios.get(`/api/admin/lots/${id}`);
+        form.prime_location_name = response.data.prime_location_name;
+        form.address = response.data.address;
+        form.pin_code = response.data.pin_code;
+        form.price = response.data.price;
+        form.number_of_spots = response.data.number_of_spots;
     } catch (error) {
-        console.error('Error fetching lot details:', error)
-        toast.error('Failed to load parking lot data')
-        router.push(`/admin/lots/${id}`)
+        console.error('Error fetching lot details:', error);
+        toast.error('Failed to load parking lot data');
+        router.push(`/admin/lots/${id}`);
+    } finally {
+        loading.value = false;
     }
-    finally {
-        loading.value = false
-    }
-})
+});
+
 const validateForm = () => {
     if (!form.prime_location_name.trim()) {
         toast.error('Prime location name is required');
@@ -64,8 +62,7 @@ const validateForm = () => {
 
 const handleSubmit = async () => {
     if (!validateForm()) return;
-
-    if (loading.value) return; // Prevent double submission
+    if (loading.value) return;
 
     loading.value = true;
 
@@ -78,8 +75,7 @@ const handleSubmit = async () => {
 
         await axios.put(`/api/admin/lots/${id}`, payload);
         toast.success(`Parking Lot updated successfully! ID: ${id}`);
-
-        router.push(`/admin/lots/${id}`);
+        router.push(`/lots/${id}`);
     } catch (error) {
         console.error(error);
         const errorMessage = error.response?.data?.message || 'Error while updating parking lot';
@@ -91,266 +87,177 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-    <div class="edit-container">
-        <div v-if="initialLoading" class="loading-spinner">
+    <div class="container">
+        <div v-if="loading" class="loading">
             <div class="spinner"></div>
-            <p>Loading parking lot data...</p>
+            <p>Loading...</p>
         </div>
 
-        <div v-else class="form-wrapper">
-            <div class="header">
-                <h2>Edit Parking Lot</h2>
-                <p class="subtitle">Update parking lot information</p>
+        <form v-else @submit.prevent="handleSubmit" class="form">
+            <h2>Edit Parking Lot</h2>
+
+            <label for="prime_location_name">Prime Location Name</label>
+            <input v-model="form.prime_location_name" type="text" placeholder="Prime Location Name" required />
+
+            <label for="address">Address</label>
+            <textarea v-model="form.address" placeholder="Address" rows="3" required></textarea>
+
+            <div class="row">
+                <label for="pincode">PIN Code</label>
+                <input v-model="form.pin_code" type="text" maxlength="6" placeholder="PIN Code" required />
+
+                <label for="price">Price per Hour (₹)</label>
+                <input v-model="form.price" type="number" step="1" min="0" placeholder="Price (₹)" required />
             </div>
 
-            <form @submit.prevent="handleSubmit" class="edit-form">
-                <div class="form-group">
-                    <label for="prime_location_name">Prime Location Name</label>
-                    <input id="prime_location_name" v-model="form.prime_location_name" type="text"
-                        placeholder="Enter Prime Location Name" :disabled="loading" class="form-input" />
-                </div>
+            <label for="number_of_spots">Number of Parking Spots</label>
+            <input v-model="form.number_of_spots" type="number" min="1" placeholder="Number of Spots" required />
 
-                <div class="form-group">
-                    <label for="address">Address</label>
-                    <textarea id="address" v-model="form.address" placeholder="Enter full address" :disabled="loading"
-                        class="form-input form-textarea" rows="3"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="pincode">PIN Code</label>
-                        <input id="pincode" v-model="form.pin_code" type="text" maxlength="6" placeholder="6-digit PIN"
-                            :disabled="loading" class="form-input" />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="price">Price per Hour (₹)</label>
-                        <input id="price" v-model="form.price" type="number" step="1" min="0" placeholder="Enter price"
-                            :disabled="loading" class="form-input" />
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="number_of_spots">Number of Parking Spots</label>
-                    <input id="number_of_spots" v-model="form.number_of_spots" type="number" min="1"
-                        placeholder="Total parking spots available" :disabled="loading" class="form-input" />
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" @click="router.go(-1)" class="btn btn-secondary" :disabled="loading">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" :disabled="loading">
-                        <span v-if="loading" class="btn-spinner"></span>
-                        {{ loading ? 'Updating...' : 'Update Parking Lot' }}
-                    </button>
-                </div>
-            </form>
-        </div>
+            <div class="actions">
+                <button type="button" @click="router.go(-1)" class="cancel">
+                    Cancel
+                </button>
+                <button type="submit" :disabled="loading">
+                    {{ loading ? 'Updating...' : 'Update' }}
+                </button>
+            </div>
+        </form>
     </div>
 </template>
 
 <style scoped>
-.edit-container {
-    min-height: 100vh;
-    padding: 2rem;
+.container {
+    min-height: calc(100vh - 83px);
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #f8f9fa;
+    padding: 1rem;
 }
 
-.loading-spinner {
+.loading {
     background: white;
-    padding: 3rem;
-    border-radius: 12px;
+    padding: 2rem;
+    border-radius: 8px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ddd;
+    border-top: 2px solid #007bff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 1rem;
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
+    to {
         transform: rotate(360deg);
     }
 }
 
-.form-wrapper {
+.form {
     background: white;
-    padding: 2.5rem;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 600px;
-}
-
-.header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.header h2 {
-    color: #333;
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-}
-
-.subtitle {
-    color: #666;
-    font-size: 1rem;
-    margin: 0;
-}
-
-.edit-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    color: #333;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.form-input {
-    padding: 0.875rem;
-    border: 2px solid #e1e5e9;
+    padding: 2rem;
     border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 480px;
+}
+
+h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
     font-size: 1rem;
-    transition: all 0.3s ease;
-    background: #fafafa;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #667eea;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.form-input:disabled {
-    background: #f5f5f5;
-    color: #999;
-    cursor: not-allowed;
-}
-
-.form-textarea {
-    resize: vertical;
-    min-height: 80px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
     font-family: inherit;
 }
 
-.form-actions {
-    display: flex;
+input:focus,
+textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.row input {
+    margin-bottom: 0;
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
     margin-top: 1rem;
 }
 
-.btn {
-    padding: 0.875rem 1.5rem;
+button {
+    padding: 0.75rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 1rem;
-    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    flex: 1;
-}
-
-.btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: all 0.2s;
+    background: #007bff;
     color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+button:hover:not(:disabled) {
+    background: #0056b3;
 }
 
-.btn-secondary {
-    background: #f8f9fa;
-    color: #666;
-    border: 2px solid #e1e5e9;
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.btn-secondary:hover:not(:disabled) {
-    background: #e9ecef;
-    border-color: #dee2e6;
+.cancel {
+    background: #6c757d;
+    color: white;
 }
 
-.btn-spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid transparent;
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.cancel:hover {
+    background: #545b62;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-    .edit-container {
-        padding: 1rem;
+@media (max-width: 480px) {
+    .row {
+        grid-template-columns: 1fr;
+        gap: 0;
     }
 
-    .form-wrapper {
-        padding: 1.5rem;
+    .row input {
+        margin-bottom: 1rem;
     }
 
-    .form-row {
+    .actions {
         grid-template-columns: 1fr;
     }
-
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .header h2 {
-        font-size: 1.5rem;
-    }
-}
-
-/* Input validation states */
-.form-input:invalid {
-    border-color: #dc3545;
-}
-
-.form-input:valid {
-    border-color: #28a745;
 }
 </style>

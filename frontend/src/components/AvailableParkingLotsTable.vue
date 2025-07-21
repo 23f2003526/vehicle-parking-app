@@ -47,7 +47,7 @@ const openBookingModal = async (lot) => {
     <div>
         <h3>Available Parking Lots</h3>
         <input v-model="filterText" placeholder="Search by location or pincode"
-            style="margin-bottom: 10px; padding: 5px; width: 20%;" />
+            style="margin-bottom: 10px; padding: 5px; min-width: 25vh;" />
         <div class="table-wrapper" v-if="filteredLots.length">
             <table>
                 <thead>
@@ -56,6 +56,7 @@ const openBookingModal = async (lot) => {
                         <th>Location</th>
                         <th>Address</th>
                         <th>Availability</th>
+                        <th>Hourly Price</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -65,6 +66,7 @@ const openBookingModal = async (lot) => {
                         <td>{{ lot.prime_location_name }}</td>
                         <td>{{ lot.address }}, {{ lot.pin_code }}</td>
                         <td>{{ lot.available_spots }} / {{ lot.number_of_spots }}</td>
+                        <td>₹{{ lot.price }}</td>
                         <td><button @click="openBookingModal(lot)" :disabled="lot.available_spots === 0">
                                 {{ lot.available_spots > 0 ? 'Book' : 'Full' }}
                             </button></td>

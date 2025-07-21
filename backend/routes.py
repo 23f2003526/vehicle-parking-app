@@ -375,6 +375,9 @@ class BookingResource(Resource):
 
         result = []
         for b in bookings:
+            spot = b.spot
+            lot = spot.lot if spot else None
+
             result.append({
                 "id": b.id,
                 "start_time": b.start_time.isoformat(),
@@ -383,13 +386,14 @@ class BookingResource(Resource):
                 "vehicle_number": b.vehicle.license_plate,
                 "spot_id": b.spot_id,
                 "created_at": b.created_at.isoformat(),
-                "spot_number": b.spot.spot_number,
-                "spot_type": b.spot.spot_type,
-                "lot_id": b.spot.lot.id,
-                "location_name": b.spot.lot.prime_location_name,
-                "address": b.spot.lot.address,
-                "pin_code": b.spot.lot.pin_code,
-                "status": "active" if not b.end_time else "completed"
+                "spot_number": spot.spot_number if spot else "Deleted Spot",
+                "spot_type": spot.spot_type if spot else "N/A",
+                "lot_id": lot.id if lot else None,
+                "location_name": lot.prime_location_name if lot else "Unknown",
+                "address": lot.address if lot else "Unknown Address",
+                "pin_code": lot.pin_code if lot else "Unknown",
+                "status": "active" if not b.end_time else "completed",
+                "price": lot.price if lot else 0
             })
 
         return result, 200
