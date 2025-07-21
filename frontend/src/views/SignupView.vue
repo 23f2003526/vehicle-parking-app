@@ -31,10 +31,10 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-    <div class="signup-container">
-        <h2>Sign Up</h2>
-        <form @submit.prevent="handleSubmit" class="signup-form">
+    <div class="container">
+        <form @submit.prevent="handleSubmit" class="form">
             <div class="form-group">
+                <h2>Sign Up</h2>
                 <label for="name">Name</label>
                 <input id="name" v-model="form.name" type="text" placeholder="Your Name" />
             </div>
@@ -54,4 +54,65 @@ const handleSubmit = async () => {
     </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.container {
+    min-height: calc(100vh - 76px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.form {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 320px;
+}
+
+h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-align: center;
+    color: #333;
+}
+
+input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+button {
+    width: 100%;
+    padding: 0.75rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+</style>

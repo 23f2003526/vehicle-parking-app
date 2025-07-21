@@ -39,10 +39,11 @@ function goToLot(id) {
 
 <style scoped>
 h2 {
-    margin-bottom: 1rem;
+    /* margin-bottom: 1rem; */
     font-size: 1.5rem;
     font-weight: bold;
     text-align: left;
+    margin: 1% 2% 0 2%;
 }
 
 .lots-grid {
@@ -50,6 +51,7 @@ h2 {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 20px;
     padding: 0 1rem;
+    margin: 1% 2% 0 2%;
 }
 
 .lot-card {

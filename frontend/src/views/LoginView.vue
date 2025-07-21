@@ -14,39 +14,95 @@ const form = reactive({
 
 const handleSubmit = async () => {
   if (!form.email || !form.password) {
-    // console.error("Both field are required")
     toast.error('Both fields are required');
     return;
   }
 
   try {
-    await axios.post('/api/login', form); // Replace with your real endpoint
+    await axios.post('/api/login', form);
     toast.success('Login successful!');
-    router.push('/dashboard'); // Redirect after login
+    router.push('/dashboard');
   } catch (error) {
-    // console.error(error);
     toast.error('Login failed. Please check your credentials.');
   }
 };
 </script>
 
 <template>
-  <div class="login-container">
-    <h2>Login</h2>
-    <form @submit.prevent="handleSubmit" class="login-form">
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input id="email" v-model="form.email" type="email" placeholder="you@example.com" />
-      </div>
+  <div class="container">
+    <form @submit.prevent="handleSubmit" class="form">
+      <h2>Login</h2>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input id="password" v-model="form.password" type="password" placeholder="********" />
-      </div>
+      <label for="email">Email</label>
+      <input v-model="form.email" type="email" placeholder="Email" required />
 
-      <button type="submit" class="submit-btn">Log In</button>
+      <label for="password">Password</label>
+      <input v-model="form.password" type="password" placeholder="Password" required />
+
+      <button type="submit">Log In</button>
     </form>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.container {
+  min-height: calc(100vh - 76px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+}
+
+.form {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 320px;
+}
+
+h2 {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 500;
+  text-align: center;
+  color: #333;
+}
+
+input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background: #0056b3;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+</style>

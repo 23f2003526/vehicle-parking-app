@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import axios from 'axios'
@@ -14,9 +14,9 @@ const lot = ref(null)
 const loading = ref(true)
 const deleteLoading = ref(false)
 const showDeleteModal = ref(false)
-const showBookSpotModal = ref(false)
 
 const userStore = useUserStore()
+const isAdmin = computed(() => userStore.isAdmin)
 
 onMounted(async () => {
     try {
@@ -80,135 +80,463 @@ const goBack = () => {
 </script>
 
 <template>
-    <div v-if="loading" class="loading-container">
-        <div class="spinner"></div>
-        <p>Loading...</p>
-    </div>
-
-    <div v-else-if="lot" class="lot-summary">
-        <!-- Header with actions -->
-        <div class="header-section">
-            <div class="header-info">
-                <h2>{{ lot.prime_location_name }}</h2>
-                <p class="address">{{ lot.address }}, {{ lot.pin_code }}</p>
-            </div>
-            <div class="action-buttons">
-                <button @click="goBack" class="btn btn-secondary">
-                    &larr; Back
-                </button>
-                <button v-if="userStore.isAdmin" @click="handleEdit" class="btn btn-primary">
-                    ✎ Edit
-                </button>
-                <button v-if="userStore.isAdmin" @click="confirmDelete" class="btn btn-danger"
-                    :disabled="deleteLoading">
-                    🗑 Delete
-                </button>
-            </div>
+    <div class="container">
+        <div v-if="loading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading...</p>
         </div>
 
-        <!-- Lot details -->
-        <div class="details-section">
-            <div class="detail-card">
-                <h3>Pricing</h3>
-                <p class="price">₹{{ lot.price }} per hour</p>
+        <div v-else-if="lot" class="lot-summary">
+            <!-- Header with actions -->
+            <div class="header-section">
+                <div class="header-info">
+                    <h2>{{ lot.prime_location_name }}</h2>
+                    <p class="address">{{ lot.address }}, {{ lot.pin_code }}</p>
+                </div>
+                <div class="action-buttons">
+                    <button @click="goBack" class="btn btn-secondary">← Back</button>
+                    <button v-if="isAdmin" @click="handleEdit" class="btn btn-primary">Edit</button>
+                    <!-- disappears when I reload -->
+                    <button v-if="isAdmin" @click="confirmDelete" class="btn btn-danger" :disabled="deleteLoading">
+                        Delete
+                    </button>
+                    <!-- disappears when I reload -->
+                </div>
             </div>
-            <div class="detail-card">
-                <h3>Capacity</h3>
-                <p>Total Spots: <span class="highlight">{{ lot.number_of_spots }}</span></p>
-                <p>Available: <span class="available">{{ lot.available_spots }}</span></p>
-                <p>Occupied: <span class="occupied">{{ lot.occupied_spots }}</span></p>
-            </div>
-        </div>
 
-        <!-- Spots grid -->
-        <div class="spots-section">
-            <h3>Parking Spots</h3>
-            <div class="spots-grid">
-                <div v-for="spot in lot.spots" :key="spot.spot_id" class="spot-card"
-                    :class="spot.is_occupied ? 'occupied' : 'available'" @click="confirmBooking">
-                    <div class="spot-number">{{ spot.spot_number }}</div>
-                    <p><strong>Type:</strong> {{ spot.spot_type }}</p>
-                    <p class="status">
-                        <span :class="spot.is_occupied ? 'status-occupied' : 'status-available'">
+            <!-- Lot details -->
+            <div class="details-section">
+                <div class="detail-card">
+                    <h3>Pricing</h3>
+                    <p class="price">₹{{ lot.price }}/hr</p>
+                </div>
+                <div class="detail-card">
+                    <h3>Capacity</h3>
+                    <div class="capacity-stats">
+                        <div class="stat">
+                            <span class="stat-value">{{ lot.number_of_spots }}</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value available">{{ lot.available_spots }}</span>
+                            <span class="stat-label">Available</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value occupied">{{ lot.occupied_spots }}</span>
+                            <span class="stat-label">Occupied</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spots grid -->
+            <div class="spots-section">
+                <h3>Parking Spots</h3>
+                <div class="spots-grid">
+                    <div v-for="spot in lot.spots" :key="spot.spot_id" class="spot-card"
+                        :class="{ occupied: spot.is_occupied, available: !spot.is_occupied }"
+                        @click="!spot.is_occupied && confirmBooking()">
+                        <div class="spot-number">{{ spot.spot_number }}</div>
+                        <div class="spot-type">{{ spot.spot_type }}</div>
+                        <div class="spot-status" :class="spot.is_occupied ? 'status-occupied' : 'status-available'">
                             {{ spot.is_occupied ? 'Occupied' : 'Available' }}
-                        </span>
-                    </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else class="error-container">
+            <h2>Unable to load parking lot</h2>
+            <p>Please try again later</p>
+            <button @click="goBack" class="btn btn-secondary">Go Back</button>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDelete">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h3>Delete Parking Lot</h3>
+                    <button @click="cancelDelete" class="close-btn">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>"{{ lot?.prime_location_name }}"</strong>?</p>
+                    <p class="warning-text">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button @click="cancelDelete" class="btn btn-secondary">Cancel</button>
+                    <button @click="handleDelete" class="btn btn-danger" :disabled="deleteLoading">
+                        {{ deleteLoading ? 'Deleting...' : 'Delete' }}
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-
-    <div v-else class="error-container">
-        <h2>Oops! Something went wrong</h2>
-        <p>We couldn't load the parking lot data.</p>
-        <button @click="goBack" class="btn btn-secondary">Go Back</button>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDelete">
-        <div class="modal-content" @click.stop>
-            <div class="modal-header">
-                <h3>Confirm Delete</h3>
-                <button @click="cancelDelete" class="close-btn">
-                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="warning-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5zs">
-                        </path>
-                    </svg>
-                </div>
-                <p>Are you sure you want to delete <strong>"{{ lot?.prime_location_name }}"</strong>?</p>
-                <p class="warning-text">This action cannot be undone. All parking spots and associated data will be
-                    permanently deleted.</p>
-            </div>
-            <div class="modal-footer">
-                <button @click="cancelDelete" class="btn btn-secondary">Cancel</button>
-                <button @click="handleDelete" class="btn btn-danger" :disabled="deleteLoading">
-                    <span v-if="deleteLoading" class="spinner-small"></span>
-                    {{ deleteLoading ? 'Deleting...' : 'Delete' }}
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Book Spot Modal -->
-    <div v-if="showBookSpotModal && !userStore.isAdmin" class="modal-overlay" @click="cancelBooking">
-        <div class="modal-content" @click.stop>
-            <div class="modal-header">
-                <h3>Book your Spot</h3>
-                <button @click="cancelBooking" class="close-btn">
-                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                spot_id
-                lot_id
-                user_id
-                vehicle_number
-                booking_start_time
-                booking_end_time
-                anything else?
-            </div>
-            <div class="modal-footer">
-                <button @click="cancelBooking" class="btn btn-secondary">Cancel</button>
-                <button @click="handleBooking" class="btn btn-danger" :disabled="deleteLoading">
-                    <span v-if="deleteLoading" class="spinner-small"></span>
-                    {{ deleteLoading ? 'Deleting...' : 'Delete' }}
-                </button>
-            </div>
-        </div>
-    </div>
-
 </template>
 
-<style scoped></style>
+<style scoped>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Loading State */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem;
+    color: #666;
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #e5e5e5;
+    border-top: 2px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Header Section */
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.header-info h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.address {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: #1a1a1a;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #333;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #e5e5e5;
+    color: #333;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+/* Details Section */
+.details-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.detail-card {
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.detail-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.price {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.capacity-stats {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.stat-value.available {
+    color: #059669;
+}
+
+.stat-value.occupied {
+    color: #dc2626;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Spots Section */
+.spots-section h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.spots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+}
+
+.spot-card {
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.spot-card.available {
+    cursor: pointer;
+}
+
+.spot-card.available:hover {
+    border-color: #d0d0d0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.spot-card.occupied {
+    background: #fafafa;
+    opacity: 0.7;
+}
+
+.spot-number {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.spot-type {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.spot-status {
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+}
+
+.status-available {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-occupied {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Error State */
+.error-container {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+
+.error-container h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.warning-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0.5rem 0 0 0;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e5e5e5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .header-section {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .action-buttons {
+        align-self: flex-start;
+    }
+
+    .details-section {
+        grid-template-columns: 1fr;
+    }
+
+    .capacity-stats {
+        justify-content: space-around;
+    }
+
+    .spots-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .spots-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+</style>

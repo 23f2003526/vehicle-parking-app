@@ -11,10 +11,12 @@ export const useUserStore = defineStore('user', {
     setUserDetails(details) {
       this.details = details
       this.isAdmin = details.role === 'admin'
+      // console.log('I am admin')
     },
     logout() {
       this.details = {}
       this.isAdmin = false
+      // console.log('I am not admin')
     }
   }
 })

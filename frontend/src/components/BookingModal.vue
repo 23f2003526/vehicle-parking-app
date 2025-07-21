@@ -37,7 +37,9 @@ const handleBook = async () => {
     try {
         await axios.post('/api/bookings', {
             vehicle_id: parseInt(selectedVehicle.value),
-            spot_id: props.spot.id
+            spot_id: props.spot.spot_id,    // ✅ Should be spot.spot_id from lot summary
+            start_time: new Date().toISOString(),
+            end_time: null
         })
         toast.success('Booking started successfully.')
         emit('booked')

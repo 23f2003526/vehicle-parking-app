@@ -1,6 +1,6 @@
 # TO DO
 
-- In AvailableParkingLotsTable > openBookingModal is not working. Figure out a way how to automatically assign spot_id while booking. Fix what request frontend is sending to backend at /api/booking.
+- fix the delete and edit button disappearing issue when reloading in ParkingLotView.vue
 
 - complete models.py
 - watch live session 3 from YT.
@@ -16,5 +16,7 @@
   View parking lot details and spot status/summary.
   Automatically create parking spots based on the maximum capacity of the lot.
   View/delete parking spots (only if empty).
+
+- In AvailableParkingLotsTable > openBookingModal is not working. Figure out a way how to automatically assign spot_id while booking. Fix what request frontend is sending to backend at /api/booking.
 
 ### I am now using Pinia.
