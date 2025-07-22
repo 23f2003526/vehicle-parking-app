@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive } from 'vue'
+import { onMounted, reactive, computed, ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import ParkingLot from './ParkingLot.vue'
@@ -8,6 +8,7 @@ const state = reactive({
     parkingLots: []
 })
 
+const searchQuery = ref('')
 const router = useRouter()
 
 onMounted(async () => {
@@ -20,14 +21,27 @@ onMounted(async () => {
 })
 
 function goToLot(id) {
-    router.push(`/lots/${id}`)
+    router.push(`/admin/lots/${id}`)
 }
+
+const filteredLots = computed(() => {
+    const q = searchQuery.value.toLowerCase()
+    return state.parkingLots.filter(lot =>
+        lot.prime_location_name.toLowerCase().includes(q) ||
+        lot.address.toLowerCase().includes(q) ||
+        lot.pin_code.toString().includes(q)
+    )
+})
 </script>
 
 <template>
     <h2>Parking Lots</h2>
+
+    <input v-model="searchQuery" type="text" placeholder="Search by location, address, or pincode"
+        class="search-input" />
+
     <div class="lots-grid">
-        <div v-for="lot in state.parkingLots" :key="lot.id" class="lot-card" @click="goToLot(lot.id)">
+        <div v-for="lot in filteredLots" :key="lot.id" class="lot-card" @click="goToLot(lot.id)">
             <ParkingLot :lot="lot" />
         </div>
 
@@ -38,6 +52,14 @@ function goToLot(id) {
 </template>
 
 <style scoped>
+.search-input {
+    margin-bottom: 1rem;
+    padding: 6px;
+    width: 300px;
+    border: 1px solid #ccc;
+    margin: 1% 2% 0 2%;
+}
+
 h2 {
     /* margin-bottom: 1rem; */
     font-size: 1.5rem;

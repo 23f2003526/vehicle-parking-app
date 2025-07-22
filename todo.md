@@ -1,5 +1,6 @@
 # TO DO
 
+- do I make a new component for ShowBookings.vue?
 - fix the delete and edit button disappearing issue when reloading in ParkingLotView.vue
 
 - add links so user can switch from login and signup

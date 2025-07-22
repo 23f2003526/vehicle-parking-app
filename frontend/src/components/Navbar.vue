@@ -37,8 +37,9 @@ const hideNavLinks = computed(() =>
 
                 <div class="nav-links">
                     <button @click="goTo('/dashboard')" class="nav-button">Home</button>
-                    <button v-if="userStore.isAdmin" @click="goTo('/users')" class="nav-button">Users</button>
-                    <button v-if="userStore.isAdmin" @click="goTo('/search')" class="nav-button">Search</button>
+                    <button v-if="userStore.isAdmin" @click="goTo('/admin/users')" class="nav-button">Users</button>
+                    <button v-if="userStore.isAdmin" @click="goTo('/admin/bookings')"
+                        class="nav-button">Bookings</button>
                     <button @click="goTo('/summary')" class="nav-button">Summary</button>
                     <button @click="goTo('/edit-profile')" class="nav-button">Edit Profile</button>
                     <button @click="logout" class="nav-button logout-button">Logout</button>

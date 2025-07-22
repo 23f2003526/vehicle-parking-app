@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from math import ceil
 import uuid
 import jwt
 from app import app
@@ -293,6 +294,45 @@ class SpotResource(Resource):
         db.session.commit()
         return {"message": "Spot updated successfully"}, 200
     
+
+class ActiveBookingResource(Resource):
+    @admin_required
+    def get(self, lot_id, spot_number):
+        spot = ParkingSpot.query.filter_by(lot_id=lot_id, spot_number=spot_number).first()
+        if not spot:
+            abort(404, message="Parking spot not found")
+
+        if not spot.is_occupied:
+            abort(400, message="Spot is not currently occupied")
+
+        active_booking = Booking.query.filter_by(spot_id=spot.id, end_time=None).first()
+        if not active_booking:
+            abort(404, message="No active booking found for this spot")
+
+        vehicle = active_booking.vehicle
+        if not vehicle:
+            abort(404, message="Vehicle associated with this booking not found")
+
+        IST = timezone(timedelta(hours=5, minutes=30))
+        now = datetime.now(IST)
+
+        start_time = active_booking.start_time
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=IST)
+
+        duration_hours = max(1, ceil((now - start_time).total_seconds() / 3600))
+        estimated_cost = duration_hours * spot.lot.price
+
+        return {
+            "spot_id": spot.id,
+            "customer_id": vehicle.user_id,
+            "vehicle_number": vehicle.license_plate,
+            "start_time": active_booking.start_time.isoformat(),
+            "estimated_cost": estimated_cost
+        }, 200
+
+
+    
 # api.add_resource(SpotResource, '/admin/lots/<int:lot_id>/spots/<int:spot_number>')
 
 # WHAT's LEFT :: Admin should be able to see list of all users and their details. (username, spot used, reservation history etc.)
@@ -526,4 +566,50 @@ class UserLotsResource(Resource):
 
         return lot_list, 200
     
+
+class Users(Resource):
+    @admin_required
+    def get(self):
+        users = User.query.all()
+        return [{
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role.name if u.role else "No Role",
+            "vehicles": [{
+                "id": v.id,
+                "license_plate": v.license_plate,
+                "vehicle_type": v.vehicle_type
+            } for v in u.vehicles]
+        } for u in users], 200
+    
+class AdminBookingResource(Resource):
+    @admin_required
+    def get(self):
+        bookings = Booking.query.all()
+
+        result = []
+        for b in bookings:
+            spot = b.spot
+            lot = spot.lot if spot else None
+
+            result.append({
+                "id": b.id,
+                "start_time": b.start_time.isoformat(),
+                "end_time": b.end_time.isoformat() if b.end_time else None,
+                "vehicle_id": b.vehicle_id,
+                "vehicle_number": b.vehicle.license_plate,
+                "spot_id": b.spot_id,
+                "created_at": b.created_at.isoformat(),
+                "spot_number": spot.spot_number if spot else "Deleted Spot",
+                "spot_type": spot.spot_type if spot else "N/A",
+                "lot_id": lot.id if lot else None,
+                "location_name": lot.prime_location_name if lot else "Unknown",
+                "address": lot.address if lot else "Unknown Address",
+                "pin_code": lot.pin_code if lot else "Unknown",
+                "status": "active" if not b.end_time else "completed",
+                "price": lot.price if lot else 0
+            })
+
+        return result, 200
 

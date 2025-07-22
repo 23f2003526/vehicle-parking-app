@@ -77,6 +77,54 @@ const handleDelete = async () => {
 const goBack = () => {
     router.push('/dashboard')
 }
+
+const showSpotModal = ref(false)
+const selectedSpot = ref(null)
+
+const showOccupiedModal = ref(false)
+const occupiedDetails = ref(null)
+const loadingOccupied = ref(false)
+
+const openSpotModal = (spot) => {
+    selectedSpot.value = spot
+    showSpotModal.value = true
+}
+
+const closeSpotModal = () => {
+    showSpotModal.value = false
+    selectedSpot.value = null
+}
+
+const deleteSpot = async () => {
+    try {
+        await axios.delete(`/api/admin/lots/${id}/spots/${selectedSpot.value.spot_number}`)
+        toast.success('Spot deleted successfully')
+        closeSpotModal()
+        location.reload()  // Or re-fetch lot data
+    } catch (err) {
+        toast.error(err.response?.data?.message || 'Failed to delete spot')
+    }
+}
+
+const openOccupiedDetails = async () => {
+    loadingOccupied.value = true
+    try {
+        const res = await axios.get(`/api/admin/lots/${id}/spots/${selectedSpot.value.spot_number}/active-booking`)
+        occupiedDetails.value = res.data
+        // console.log(occupiedDetails.value)
+        showOccupiedModal.value = true
+    } catch (err) {
+        toast.error(err.response?.data?.message || 'Failed to fetch occupied details')
+    } finally {
+        loadingOccupied.value = false
+    }
+}
+
+const closeOccupiedModal = () => {
+    showOccupiedModal.value = false
+    occupiedDetails.value = null
+}
+
 </script>
 
 <template>
@@ -135,7 +183,7 @@ const goBack = () => {
                 <div class="spots-grid">
                     <div v-for="spot in lot.spots" :key="spot.spot_id" class="spot-card"
                         :class="{ occupied: spot.is_occupied, available: !spot.is_occupied }"
-                        @click="!spot.is_occupied && confirmBooking()">
+                        @click="openSpotModal(spot)">
                         <div class="spot-number">{{ spot.spot_number }}</div>
                         <div class="spot-type">{{ spot.spot_type }}</div>
                         <div class="spot-status" :class="spot.is_occupied ? 'status-occupied' : 'status-available'">
@@ -143,6 +191,7 @@ const goBack = () => {
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -172,6 +221,54 @@ const goBack = () => {
             </div>
         </div>
     </div>
+
+    <!-- Spot Details Modal -->
+    <div v-if="showSpotModal" class="modal-overlay" @click="closeSpotModal">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3>Spot Details</h3>
+                <button @click="closeSpotModal" class="close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <p><span>Spot ID:</span> {{ selectedSpot.spot_id }}</p>
+                <p><span>Status:</span>
+                    <span v-if="selectedSpot.is_occupied" @click="openOccupiedDetails">
+                        Occupied <span class="link">(Click for Details)</span>
+                    </span>
+                    <span v-else>Available</span>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button @click="deleteSpot" class="btn btn-danger">Delete Spot</button>
+                <button @click="closeSpotModal" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Occupied Details Modal -->
+    <div v-if="showOccupiedModal" class="modal-overlay" @click="closeOccupiedModal">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3>Occupied Spot Details</h3>
+                <button @click="closeOccupiedModal" class="close-btn">×</button>
+            </div>
+            <div class="modal-body" v-if="!loadingOccupied">
+                <p><span>Spot ID:</span> {{ occupiedDetails.spot_id }}</p>
+                <p><span>Customer ID:</span> {{ occupiedDetails.customer_id }}</p>
+                <p><span>Vehicle No.:</span> {{ occupiedDetails.vehicle_number }}</p>
+                <p><span>Parking Since:</span> {{ new Date(occupiedDetails.start_time).toLocaleString() }}</p>
+                <p><span>Cost:</span> ₹{{ occupiedDetails.estimated_cost }}</p>
+            </div>
+            <div v-else>
+                Loading occupied details...
+            </div>
+            <div class="modal-footer">
+                <button @click="closeOccupiedModal" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+
 </template>
 
 <style scoped>
@@ -425,11 +522,8 @@ const goBack = () => {
 /* Modal */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -480,6 +574,23 @@ const goBack = () => {
 
 .modal-body {
     padding: 1.5rem;
+}
+
+.modal-body p {
+    margin: 8px 0;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.modal-body span:first-child {
+    /* color: #666; */
+    margin-right: 8px;
+}
+
+.link {
+    color: #0066cc;
+    cursor: pointer;
+    text-decoration: underline;
 }
 
 .warning-text {
