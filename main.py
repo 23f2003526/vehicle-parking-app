@@ -4,13 +4,18 @@ from flask_migrate import Migrate
 # from flask_sqlalchemy import SQLAlchemy
 # import jwt
 # import uuid
-from datetime import datetime, timezone, timedelta
+# from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash
 
 from backend.config import LocalDevelopmentConfig
 from backend.models import Role, db, User
+from flask_caching import Cache
+from backend.celery.celery_factory import celery_init_app
+import flask_excel as excel
 
-def createApp():
+cache = Cache()
+
+def create_app():
     app = Flask(__name__, template_folder='frontend')
     app.config.from_object(LocalDevelopmentConfig)
     CORS(app, supports_credentials=True)
@@ -18,7 +23,9 @@ def createApp():
     # api = Api(app)
 
     db.init_app(app)
-    migrate = Migrate(app, db)
+    cache.init_app(app)
+
+    Migrate(app, db)
 
     with app.app_context():
         db.create_all()
@@ -49,7 +56,12 @@ def createApp():
 
     return app
 
-app = createApp()
+
+app = create_app()
+
+celery_app = celery_init_app(app)
+
+# excel.init_app(app)
 
 from backend.api import *
 

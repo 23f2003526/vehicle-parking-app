@@ -1,4 +1,4 @@
-from app import app
+from main import app
 from flask_restful import Api
 
 from backend.routes import BookingResource, Signup, Login, Dashboard, LotGetCreate, LotUpdateDelete, LotSummary, SpotResource, UserLotsResource, VehicleResource, BookingReleaseResource, ActiveBookingResource, Users, AdminBookingResource

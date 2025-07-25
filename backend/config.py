@@ -15,3 +15,9 @@ class LocalDevelopmentConfig(Config):
     SECRET_KEY = "your_secret_key"
  
     WTF_CSRF_ENABLED = False
+
+    CACHE_TYPE = "RedisCache"
+    CACHE_DEFAULT_TIMEOUT = 30
+    CACHE_REDIS_PORT = 6379
+
+    EXPORT_FOLDER = "./exports"

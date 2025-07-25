@@ -2,16 +2,18 @@ from datetime import datetime, timedelta, timezone
 from math import ceil
 import uuid
 import jwt
-from app import app
-from flask import jsonify, make_response, redirect, render_template, request, url_for, g
+from main import app, cache
+from flask import jsonify, make_response, redirect, render_template, request, send_file, url_for, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 
 from backend.models import Booking, Role, User, Vehicle, db, ParkingSpot, ParkingLot
 from backend.auth import token_required, admin_required
 from backend.parsers import signup_parser, login_parser, lot_parser, spot_update_parser, vehicle_parser
-
+from backend.celery.tasks import add, create_csv
+from celery.result import AsyncResult
 # api = Api(app)
+
 
 user_fields = {
     'public_id': fields.String,
@@ -21,6 +23,48 @@ user_fields = {
     # 'password': fields.String,
 }
 
+@app.get("/export-bookings")
+@token_required
+def export_bookings():
+    current_user = g.current_user
+    task = create_csv.delay(current_user.id)
+    return jsonify({
+        "message": "Export started",
+        "task_id": task.id
+    }), 202
+
+@app.get('/get-csv/<task_id>')
+@token_required
+def getCSV(task_id):
+    result = AsyncResult(task_id)
+    if result.ready():
+        data = result.result
+        if isinstance(data, dict) and 'file' in data:
+            return send_file(data['file'], as_attachment=True)
+        else:
+            return {'message': 'Unexpected task result format'}, 500
+    else:
+        return {'message' : 'task not ready'}, 405
+
+@app.get('/celery')
+def celery():
+    task = add.delay(10, 20)
+    return {'task_id': task.id}
+
+@app.get('/get-celery-data/<id>')
+def getData(id):
+    result = AsyncResult(id)
+
+    if result.ready():
+        return {'result' : result.result}
+    else:
+        return {'message' : 'task not ready'}, 405
+
+
+@app.get('/cache')
+@cache.cached(timeout = 5)
+def get_cached_time():
+    return {'time' : str(datetime.now(timezone(timedelta(hours=5, minutes=30))))}
 
 class Signup(Resource):
     @marshal_with(user_fields)
@@ -100,6 +144,7 @@ class Dashboard(Resource):
 
 class LotGetCreate(Resource):
     @admin_required
+    @cache.cached(timeout = 5, key_prefix="admin_lot_list")
     def get(self):
         lots = ParkingLot.query.all()
 
@@ -153,12 +198,15 @@ class LotGetCreate(Resource):
             db.session.add(spot)
         db.session.commit()
 
+        cache.delete('admin_lot_list')
+
         return {'message': 'Parking lot created successfully', 'lot_id': new_lot.id}, 201
 
 # api.add_resource(LotGetCreate, '/admin/lots')  
 
 class LotUpdateDelete(Resource):
     @admin_required
+    @cache.memoize(timeout = 5)
     def get(self, lot_id):
         lot = ParkingLot.query.get_or_404(lot_id)
         return {
@@ -203,6 +251,7 @@ class LotUpdateDelete(Resource):
                 db.session.add(spot)
 
         db.session.commit()
+        cache.delete_memoized(self.get)
         return {'message': f'Parking lot {lot.prime_location_name} updated successfully with {lot.number_of_spots} number of spots'}, 200
 
     @admin_required
@@ -217,12 +266,14 @@ class LotUpdateDelete(Resource):
             abort(400, message="Cannot delete lot with occupied spots")
         db.session.delete(lot)
         db.session.commit()
+        cache.delete_memoized(self.get)
         return {'message': 'Parking lot deleted successfully'}, 200
     
 # api.add_resource(LotUpdateDelete, '/admin/lots/<int:lot_id>')
 
 class LotSummary(Resource):
     @token_required
+    @cache.memoize(timeout = 5)
     def get(self, lot_id):
         lot = ParkingLot.query.get_or_404(lot_id)
 
@@ -339,6 +390,7 @@ class ActiveBookingResource(Resource):
 
 class VehicleResource(Resource):
     @token_required
+    @cache.memoize(timeout = 5)
     def get(self):
         current_user = g.current_user
         vehicles = Vehicle.query.filter_by(user_id=current_user.id).all()
@@ -385,6 +437,7 @@ class VehicleResource(Resource):
         vehicle.license_plate = args['license_plate']
         vehicle.vehicle_type = args['vehicle_type']
         db.session.commit()
+        cache.delete_memoized(self.get)
 
         return {"message": "Vehicle updated successfully."}, 200
 
@@ -402,11 +455,13 @@ class VehicleResource(Resource):
 
         db.session.delete(vehicle)
         db.session.commit()
+        cache.delete_memoized(self.get)
 
         return {"message": "Vehicle deleted successfully."}, 200 
 
 class BookingResource(Resource):
     @token_required
+    @cache.memoize(timeout = 5)
     def get(self):
         current_user = g.current_user
         user_vehicle_ids = [v.id for v in current_user.vehicles]
@@ -485,6 +540,7 @@ class BookingResource(Resource):
 
         db.session.add(booking)
         db.session.commit()
+        cache.delete_memoized(self.get)
 
         return {"message": "Booking started successfully.", "booking_id": booking.id}, 201
 
@@ -507,6 +563,7 @@ class BookingResource(Resource):
 
         db.session.delete(booking)
         db.session.commit()
+        cache.delete_memoized(self.get)
 
         return {"message": "Booking cancelled successfully."}, 200
 
@@ -544,6 +601,7 @@ class BookingReleaseResource(Resource):
 
 class UserLotsResource(Resource):
     @token_required
+    @cache.cached(timeout = 5)
     def get(self):
         lots = ParkingLot.query.all() #tweak this later according to user preference
 
@@ -569,6 +627,7 @@ class UserLotsResource(Resource):
 
 class Users(Resource):
     @admin_required
+    @cache.cached(timeout = 5)
     def get(self):
         users = User.query.all()
         return [{
@@ -585,6 +644,7 @@ class Users(Resource):
     
 class AdminBookingResource(Resource):
     @admin_required
+    @cache.cached(timeout = 5)
     def get(self):
         bookings = Booking.query.all()
 

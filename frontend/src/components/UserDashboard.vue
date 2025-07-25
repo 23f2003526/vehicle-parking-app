@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useToast } from 'vue-toastification';
 import axios from 'axios'
 import BookingHistoryTable from '@/components/BookingHistoryTable.vue'
 import AvailableParkingLotsTable from '@/components/AvailableParkingLotsTable.vue'
@@ -8,6 +9,7 @@ import ReleaseBookingModal from './ReleaseBookingModal.vue'
 
 const parkingLots = ref([])
 const bookings = ref([])
+const toast = useToast()
 
 const fetchDataAgain = async () => {
     try {
@@ -59,12 +61,54 @@ const closeReleaseModal = () => {
     fetchDataAgain()
 }
 
+async function handleExport() {
+    try {
+        const res = await axios.get('/api/export-bookings')
+
+        const celeryTaskId = res.data.task_id;
+        let retries = 0;
+        const maxRetries = 30;
+
+        const interval = setInterval(async () => {
+            try {
+                const response = await axios.get(`/api/get-csv/${celeryTaskId}`, {
+                    validateStatus: () => true // prevents axios from throwing on 405/500
+                });
+
+                if (response.status === 200) {
+                    window.open(`/api/get-csv/${celeryTaskId}`);
+                    toast.success("CSV successfully exported")
+                    clearInterval(interval);
+                } else if (response.status >= 403) {
+                    console.error('Server error while polling CSV task');
+                    toast.error("Server error while polling CSV task")
+                    clearInterval(interval);
+                }
+                if (++retries >= maxRetries) {
+                    console.warn("CSV export polling timed out.");
+                    toast.warning("Server error while polling CSV task")
+                    clearInterval(interval);
+                }
+            } catch (err) {
+                console.error("Polling failed:", err);
+                toast.error("Polling failed")
+                clearInterval(interval);
+            }
+        }, 1000); // poll every 1 second
+    } catch (err) {
+        console.error("Failed to initiate export:", err);
+        toast.error("Failed to initiate export")
+    }
+}
+
+
 </script>
 
 
 <template>
     <div class="main">
         <h2>User Dashboard</h2>
+        <button @click="handleExport" class="export-btn">Export Bookings</button>
 
         <BookingHistoryTable :bookings="bookings" @view-booking="handleViewBooking" />
 

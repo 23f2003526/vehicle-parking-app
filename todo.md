@@ -1,5 +1,8 @@
 # TO DO
 
+- celery -A main:celery_app worker -l INFO
+- add amount paid column in Bookings Table.. update it when user clicks release. Display it in csv file generated.
+- fix login and logout in navbar.
 - do I make a new component for ShowBookings.vue?
 - fix the delete and edit button disappearing issue when reloading in ParkingLotView.vue
 
@@ -23,3 +26,5 @@
 - In AvailableParkingLotsTable > openBookingModal is not working. Figure out a way how to automatically assign spot_id while booking. Fix what request frontend is sending to backend at /api/booking.
 
 ### I am now using Pinia.
+
+- Call a Flask route like /export-parking-csv (POST) in frontend. After it is downloaded, send an alert to user.
