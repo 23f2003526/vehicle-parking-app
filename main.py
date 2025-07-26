@@ -24,7 +24,6 @@ def create_app():
 
     db.init_app(app)
     cache.init_app(app)
-
     Migrate(app, db)
 
     with app.app_context():
@@ -53,15 +52,16 @@ def create_app():
             db.session.add(admin_user)
 
         db.session.commit()
-
+    app.app_context().push()
     return app
 
 
 app = create_app()
 
 celery_app = celery_init_app(app)
-
-# excel.init_app(app)
+import backend.celery.celery_schedule
+# from backend.celery import celery_schedule
+# celery_schedule.register_periodic_tasks(celery_app)
 
 from backend.api import *
 

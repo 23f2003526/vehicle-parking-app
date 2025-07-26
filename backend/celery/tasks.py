@@ -2,12 +2,13 @@ from celery import shared_task
 import time
 from backend.models import User, Booking, Vehicle, ParkingSpot, ParkingLot
 from sqlalchemy.orm import joinedload
-from main import db
+# from main import db
 from flask import current_app
 from datetime import datetime
 import os
 import flask_excel as excel
 from pyexcel import save_as
+from backend.celery.mail_service import send_email
 
 @shared_task(ignore_result = False)
 def add(x,y):
@@ -17,9 +18,6 @@ def add(x,y):
 
 @shared_task(ignore_result=False)
 def create_csv(user_id):
-    """
-    Generate a CSV export of a user's booking history using flask-excel.
-    """
     user = User.query.options(joinedload(User.vehicles)).get(user_id)
     if not user:
         return {"status": "error", "message": "User not found"}
@@ -77,3 +75,8 @@ def create_csv(user_id):
         "file": file_path,
         "message": f"{len(records)} bookings exported for user {user_id}"
     }
+
+
+@shared_task(ignore_result = True)
+def email_reminder(to, subject, content):
+    send_email(to, subject, content)
