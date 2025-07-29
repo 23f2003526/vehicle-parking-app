@@ -65,11 +65,24 @@ function getCost(start, end, pricePerHour) {
                             ₹{{ getCost(b.start_time, b.end_time, b.price) }}
                         </td>
                         <td>
-                            <button v-if="!b.end_time" @click="emit('view-booking', b)" class="release-btn">
+                            <button v-if="!b.end_time && !b.is_reservation" @click="emit('view-booking', b)"
+                                class="release-btn">
                                 Release
                             </button>
+
+                            <template v-else-if="b.is_reservation">
+                                <button @click="emit('book-reservation', b)" class="book-btn">
+                                    Book
+                                </button>
+                                <button @click="emit('delete-reservation', b)" class="delete-btn">
+                                    Delete
+                                </button>
+                            </template>
+
                             <span v-else class="parked-out">Parked Out</span>
                         </td>
+
+
                     </tr>
                 </tbody>
             </table>
@@ -125,5 +138,23 @@ function getCost(start, end, pricePerHour) {
     overflow-y: auto;
     border: 1px solid #ccc;
     margin-top: 15px;
+}
+
+.book-btn {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin: 3px;
+}
+
+.delete-btn {
+    background: #ff4848;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin: 3px;
 }
 </style>

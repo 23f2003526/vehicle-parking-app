@@ -120,6 +120,10 @@ const openOccupiedDetails = async () => {
     }
 }
 
+const openReservedDetails = async () => {
+
+}
+
 const closeOccupiedModal = () => {
     showOccupiedModal.value = false
     occupiedDetails.value = null
@@ -173,6 +177,10 @@ const closeOccupiedModal = () => {
                             <span class="stat-value occupied">{{ lot.occupied_spots }}</span>
                             <span class="stat-label">Occupied</span>
                         </div>
+                        <div class="stat">
+                            <span class="stat-value reserved">{{ lot.reserved_spots }}</span>
+                            <span class="stat-label">Reserved</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -181,18 +189,25 @@ const closeOccupiedModal = () => {
             <div class="spots-section">
                 <h3>Parking Spots</h3>
                 <div class="spots-grid">
-                    <div v-for="spot in lot.spots" :key="spot.spot_id" class="spot-card"
-                        :class="{ occupied: spot.is_occupied, available: !spot.is_occupied }"
-                        @click="openSpotModal(spot)">
+                    <div v-for="spot in lot.spots" :key="spot.spot_id" class="spot-card" :class="{
+                        occupied: spot.status === 'occupied',
+                        available: spot.status === 'available',
+                        reserved: spot.status === 'reserved'
+                    }" @click="openSpotModal(spot)">
+
                         <div class="spot-number">{{ spot.spot_number }}</div>
                         <div class="spot-type">{{ spot.spot_type }}</div>
-                        <div class="spot-status" :class="spot.is_occupied ? 'status-occupied' : 'status-available'">
-                            {{ spot.is_occupied ? 'Occupied' : 'Available' }}
+                        <div class="spot-status" :class="{
+                            'status-occupied': spot.status === 'occupied',
+                            'status-available': spot.status === 'available',
+                            'status-reserved': spot.status === 'reserved'
+                        }">
+                            {{ spot.status }}
                         </div>
                     </div>
                 </div>
-
             </div>
+
         </div>
 
         <div v-else class="error-container">
@@ -230,12 +245,22 @@ const closeOccupiedModal = () => {
                 <button @click="closeSpotModal" class="close-btn">×</button>
             </div>
             <div class="modal-body">
-                <p><span>Spot ID:</span> {{ selectedSpot.spot_id }}</p>
-                <p><span>Status:</span>
-                    <span v-if="selectedSpot.is_occupied" @click="openOccupiedDetails">
-                        Occupied <span class="link">(Click for Details)</span>
-                    </span>
-                    <span v-else>Available</span>
+                <p><strong>Spot ID:</strong> {{ selectedSpot.spot_id }}</p>
+                <p>
+                    <strong>Status:</strong>
+                    <template v-if="selectedSpot.status === 'occupied'">
+                        <span @click="openOccupiedDetails" class="">
+                            Occupied <span class="link">(Click for Details)</span>
+                        </span>
+                    </template>
+                    <template v-else-if="selectedSpot.status === 'reserved'">
+                        <span @click="openReservedDetails" class="">
+                            Reserved <span class="link">(Click for Details)</span>
+                        </span>
+                    </template>
+                    <template v-else>
+                        Available
+                    </template>
                 </p>
             </div>
             <div class="modal-footer">
@@ -244,6 +269,7 @@ const closeOccupiedModal = () => {
             </div>
         </div>
     </div>
+
 
     <!-- Occupied Details Modal -->
     <div v-if="showOccupiedModal" class="modal-overlay" @click="closeOccupiedModal">
@@ -433,6 +459,10 @@ const closeOccupiedModal = () => {
     color: #dc2626;
 }
 
+.stat-value.reserved {
+    color: #FFD700;
+}
+
 .stat-label {
     font-size: 0.9rem;
     color: #666;
@@ -475,6 +505,10 @@ const closeOccupiedModal = () => {
     opacity: 0.7;
 }
 
+.spot-card.reserved {
+    cursor: pointer;
+}
+
 .spot-number {
     font-size: 1.2rem;
     font-weight: 600;
@@ -503,6 +537,11 @@ const closeOccupiedModal = () => {
 .status-occupied {
     background: #fee2e2;
     color: #991b1b;
+}
+
+.status-reserved {
+    background: #f8efb9;
+    color: #ff9100;
 }
 
 /* Error State */

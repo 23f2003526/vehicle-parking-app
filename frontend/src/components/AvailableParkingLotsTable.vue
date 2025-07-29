@@ -23,7 +23,7 @@ const filteredLots = computed(() => {
 const fetchAvailableSpot = async (lot) => {
     try {
         const res = await axios.get(`/api/lots/${lot.id}/summary`)
-        const availableSpots = res.data.spots.filter(s => !s.is_occupied)
+        const availableSpots = res.data.spots.filter(s => !s.is_occupied && s.status === 'available')
         if (availableSpots.length === 0) {
             toast.error('No available spots in this lot.')
             return null
@@ -36,11 +36,13 @@ const fetchAvailableSpot = async (lot) => {
     }
 }
 
-const openBookingModal = async (lot) => {
+const openBookingModal = async (lot, type) => {
     const spot = await fetchAvailableSpot(lot)
     if (!spot) return
-    emit('open-booking', { lot, spot })
+    emit('open-booking', { lot, spot, type })
 }
+
+
 </script>
 
 <template>
@@ -67,9 +69,15 @@ const openBookingModal = async (lot) => {
                         <td>{{ lot.address }}, {{ lot.pin_code }}</td>
                         <td>{{ lot.available_spots }} / {{ lot.number_of_spots }}</td>
                         <td>₹{{ lot.price }}</td>
-                        <td><button @click="openBookingModal(lot)" :disabled="lot.available_spots === 0">
+                        <td>
+                            <button @click="openBookingModal(lot, type = 'Book')" :disabled="lot.available_spots === 0">
                                 {{ lot.available_spots > 0 ? 'Book' : 'Full' }}
-                            </button></td>
+                            </button>
+                            <button @click="openBookingModal(lot, type = 'Reserve')"
+                                :disabled="lot.available_spots === 0">
+                                {{ lot.available_spots > 0 ? 'Reserve' : 'Full' }}
+                            </button>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -97,6 +105,7 @@ button {
     border: none;
     padding: 5px 10px;
     cursor: pointer;
+    margin: 3px;
 }
 
 button:disabled {

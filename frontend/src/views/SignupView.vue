@@ -50,6 +50,9 @@ const handleSubmit = async () => {
             </div>
 
             <button type="submit" class="submit-btn">Sign Up</button>
+            <router-link to="/login" class="login-link">
+                Go to Login instead
+            </router-link>
         </form>
     </div>
 </template>
@@ -114,5 +117,13 @@ button:hover {
 
 button:active {
     transform: translateY(1px);
+}
+
+.login-link {
+    display: block;
+    margin-top: 10px;
+    text-align: center;
+    color: rgb(253, 100, 62);
+    text-decoration: underline;
 }
 </style>

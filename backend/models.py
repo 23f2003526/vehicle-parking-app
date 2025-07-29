@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -36,7 +36,7 @@ class Vehicle(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    reservations = db.relationship('Booking', backref='vehicle', lazy=True)
+    boookings = db.relationship('Booking', backref='vehicle', lazy=True)
 
 class ParkingLot(db.Model):
     __tablename__ = 'parking_lots'
@@ -61,7 +61,9 @@ class ParkingSpot(db.Model):
 
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lots.id'), nullable=False)
 
-    reservations = db.relationship('Booking', back_populates='spot', lazy=True)
+    status = db.Column(db.String(20), default='available')  # 'available', 'reserved', 'occupied'
+
+    bookings = db.relationship('Booking', back_populates='spot', lazy=True)
 
 class Booking(db.Model):
     __tablename__ = 'booking'
@@ -73,6 +75,20 @@ class Booking(db.Model):
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'), nullable=False)
     spot_id = db.Column(db.Integer, db.ForeignKey('parking_spots.id', ondelete='SET NULL'), nullable=True)
 
-    spot = db.relationship('ParkingSpot', back_populates='reservations')
+    spot = db.relationship('ParkingSpot', back_populates='bookings')
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone(timedelta(hours=5, minutes=30))))
+
+class Reservation(db.Model):
+    __tablename__ = 'reservation'
+
+    id = db.Column(db.Integer, primary_key=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'), nullable=False)
+    spot_id = db.Column(db.Integer, db.ForeignKey('parking_spots.id'), nullable=False)
+    created_at = db.Column(db.DateTime)
+    expires_at = db.Column(db.DateTime)
+
+    vehicle = db.relationship('Vehicle', backref='reservations')
+    spot = db.relationship('ParkingSpot', backref='reservations')
+
+

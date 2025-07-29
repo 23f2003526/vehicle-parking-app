@@ -4,8 +4,9 @@ import axios from 'axios'
 import { useToast } from 'vue-toastification'
 
 const props = defineProps({
-    lot: Object,      // Lot details object (required)
-    spot: Object      // Spot details object (required)
+    lot: Object,
+    spot: Object,
+    type: String
 })
 
 const emit = defineEmits(['close', 'booked'])
@@ -35,22 +36,36 @@ const handleBook = async () => {
 
     isLoading.value = true
     try {
-        await axios.post('/api/bookings', {
-            vehicle_id: parseInt(selectedVehicle.value),
-            spot_id: props.spot.spot_id,    // ✅ Should be spot.spot_id from lot summary
-            start_time: new Date().toISOString(),
-            end_time: null
-        })
-        toast.success('Booking started successfully.')
+        if (props.type === 'Book') {
+            // Booking endpoint
+            await axios.post('/api/bookings', {
+                vehicle_id: parseInt(selectedVehicle.value),
+                spot_id: props.spot.spot_id,
+                start_time: new Date().toISOString(),
+                end_time: null
+            })
+            toast.success('Booking started successfully.')
+        }
+        else if (props.type === 'Reserve') {
+            // Reservation endpoint
+            await axios.post('/api/reservations', {
+                vehicle_id: parseInt(selectedVehicle.value),
+                spot_id: props.spot.spot_id,
+            })
+            toast.success('Spot reserved successfully.')
+        }
+
         emit('booked')
         emit('close')
     } catch (err) {
         console.error(err)
-        error.value = err.response?.data?.message || 'Booking failed.'
+        error.value = err.response?.data?.message ||
+            (props.type === 'Book' ? 'Booking failed.' : 'Reservation failed.')
     } finally {
         isLoading.value = false
     }
 }
+
 
 const showAddVehicle = ref(false)
 const newVehiclePlate = ref('')
@@ -97,7 +112,7 @@ const handleSelectChange = () => {
     <div v-if="!showAddVehicle" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Book Spot at {{ lot.prime_location_name }}</h3>
+                <h3>{{ type }} a spot at {{ lot.prime_location_name }}</h3>
                 <button class="close-btn" @click="emit('close')">×</button>
             </div>
 
@@ -118,9 +133,10 @@ const handleSelectChange = () => {
             <div class="modal-footer">
                 <button @click="emit('close')" class="btn btn-secondary">Cancel</button>
                 <button @click="handleBook" class="btn btn-primary" :disabled="isLoading">
-                    {{ isLoading ? 'Booking...' : 'Book Spot' }}
+                    {{ isLoading ? (props.type === 'Book' ? 'Booking...' : 'Reserving...') : `${props.type} Spot` }}
                 </button>
             </div>
+
         </div>
     </div>
 

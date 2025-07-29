@@ -1,7 +1,7 @@
 from main import app
 from flask_restful import Api
 
-from backend.routes import BookingResource, Signup, Login, Dashboard, LotGetCreate, LotUpdateDelete, LotSummary, SpotResource, UserLotsResource, VehicleResource, BookingReleaseResource, ActiveBookingResource, Users, AdminBookingResource
+from backend.routes import BookingResource, Signup, Login, Dashboard, LotGetCreate, LotUpdateDelete, LotSummary, SpotResource, UserLotsResource, VehicleResource, BookingReleaseResource, ActiveBookingResource, Users, AdminBookingResource, ReservationResource
 
 api = Api(app)
 
@@ -23,6 +23,7 @@ api.add_resource(VehicleResource, '/vehicles')
 
 api.add_resource(BookingResource, '/bookings')
 api.add_resource(BookingReleaseResource, '/bookings/<int:booking_id>/release')
+api.add_resource(ReservationResource, '/reservations')
 
 api.add_resource(UserLotsResource, '/lots')
 

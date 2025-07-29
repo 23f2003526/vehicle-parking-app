@@ -7,10 +7,10 @@ from flask import jsonify, make_response, redirect, render_template, request, se
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 
-from backend.models import Booking, Role, User, Vehicle, db, ParkingSpot, ParkingLot
+from backend.models import Booking, Reservation, Role, User, Vehicle, db, ParkingSpot, ParkingLot
 from backend.auth import token_required, admin_required
 from backend.parsers import signup_parser, login_parser, lot_parser, spot_update_parser, vehicle_parser
-from backend.celery.tasks import add, create_csv
+from backend.celery.tasks import create_csv
 from celery.result import AsyncResult
 # api = Api(app)
 
@@ -46,25 +46,25 @@ def getCSV(task_id):
     else:
         return {'message' : 'task not ready'}, 405
 
-@app.get('/celery')
-def celery():
-    task = add.delay(10, 20)
-    return {'task_id': task.id}
+# @app.get('/celery')
+# def celery():
+#     task = add.delay(10, 20)
+#     return {'task_id': task.id}
 
-@app.get('/get-celery-data/<id>')
-def getData(id):
-    result = AsyncResult(id)
+# @app.get('/get-celery-data/<id>')
+# def getData(id):
+#     result = AsyncResult(id)
 
-    if result.ready():
-        return {'result' : result.result}
-    else:
-        return {'message' : 'task not ready'}, 405
+#     if result.ready():
+#         return {'result' : result.result}
+#     else:
+#         return {'message' : 'task not ready'}, 405
 
 
-@app.get('/cache')
-@cache.cached(timeout = 5)
-def get_cached_time():
-    return {'time' : str(datetime.now(timezone(timedelta(hours=5, minutes=30))))}
+# @app.get('/cache')
+# @cache.cached(timeout = 5)
+# def get_cached_time():
+#     return {'time' : str(datetime.now(timezone(timedelta(hours=5, minutes=30))))}
 
 class Signup(Resource):
     @marshal_with(user_fields)
@@ -152,7 +152,10 @@ class LotGetCreate(Resource):
         for lot in lots:
             total_spots = len(lot.spots)
             occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
-            available_spots = total_spots - occupied_spots
+            reserved_spots = ParkingSpot.query.filter_by(lot_id=lot.id, status='reserved').count()
+
+            available_spots = total_spots - occupied_spots - reserved_spots
+
 
             lot_list.append({
                 'id': lot.id,
@@ -162,7 +165,8 @@ class LotGetCreate(Resource):
                 'price': lot.price,
                 'number_of_spots': total_spots,
                 'occupied_spots': occupied_spots,
-                'available_spots': available_spots
+                'available_spots': available_spots,
+                'reserved_spots' : reserved_spots
             })
 
         return lot_list, 200
@@ -193,7 +197,8 @@ class LotGetCreate(Resource):
                 lot_id = new_lot.id,
                 is_occupied = False,
                 spot_number = i,
-                spot_type = "compact"
+                spot_type = "compact",
+                status = 'available'
             )
             db.session.add(spot)
         db.session.commit()
@@ -231,7 +236,7 @@ class LotUpdateDelete(Resource):
         # do the following only when all parking spots in the current parking lot are empty
         occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
         if occupied_spots > 0:
-            abort(400, message="Cannot update lot with occupied spots")
+            abort(400, message="Cannot update lot with occupied/reserved spots")
 
         if args['number_of_spots'] and args['number_of_spots'] != lot.number_of_spots:            
             lot.number_of_spots = args['number_of_spots']
@@ -246,7 +251,8 @@ class LotUpdateDelete(Resource):
                     lot_id = lot.id,
                     is_occupied = False,
                     spot_number = i,
-                    spot_type = "compact"
+                    spot_type = "compact",
+                    status = 'available'
                 )
                 db.session.add(spot)
 
@@ -279,7 +285,10 @@ class LotSummary(Resource):
 
         total_spots = len(lot.spots)
         occupied_spots = ParkingSpot.query.filter_by(lot_id=lot_id, is_occupied=True).count()
-        available_spots = total_spots - occupied_spots
+        reserved_spots = ParkingSpot.query.filter_by(lot_id=lot_id, status='reserved').count()
+
+        available_spots = total_spots - occupied_spots - reserved_spots
+
 
         spots = ParkingSpot.query.filter_by(lot_id=lot_id).all()
 
@@ -292,12 +301,14 @@ class LotSummary(Resource):
             "number_of_spots": total_spots,
             "occupied_spots": occupied_spots,
             "available_spots": available_spots,
+            "reserved_spots": reserved_spots,
             "spots": [
                 {
                     'spot_id': spot.id,
                     'spot_number': spot.spot_number,
                     'spot_type': spot.spot_type,
-                    'is_occupied': spot.is_occupied
+                    'is_occupied': spot.is_occupied,
+                    'status' : spot.status
                 } for spot in spots
             ]
         }, 200
@@ -314,7 +325,8 @@ class SpotResource(Resource):
             "id": spot.id,
             "spot_number": spot.spot_number,
             "spot_type": spot.spot_type,
-            "is_occupied": spot.is_occupied
+            "is_occupied": spot.is_occupied,
+            'status' : spot.status
         }, 200
     
     @admin_required
@@ -324,7 +336,7 @@ class SpotResource(Resource):
             abort(404, message="Parking spot not found")
 
         if spot.is_occupied:
-            abort(400, message="Cannot delete an occupied spot")
+            abort(400, message="Cannot delete an occupied/reserved spot")
         
         db.session.delete(spot)
         db.session.commit()
@@ -353,8 +365,8 @@ class ActiveBookingResource(Resource):
         if not spot:
             abort(404, message="Parking spot not found")
 
-        if not spot.is_occupied:
-            abort(400, message="Spot is not currently occupied")
+        if not spot.is_occupied or spot.status != 'occupied':
+            abort(400, message="Spot is not currently marked as occupied")
 
         active_booking = Booking.query.filter_by(spot_id=spot.id, end_time=None).first()
         if not active_booking:
@@ -381,7 +393,6 @@ class ActiveBookingResource(Resource):
             "start_time": active_booking.start_time.isoformat(),
             "estimated_cost": estimated_cost
         }, 200
-
 
     
 # api.add_resource(SpotResource, '/admin/lots/<int:lot_id>/spots/<int:spot_number>')
@@ -501,7 +512,8 @@ class BookingResource(Resource):
         parser.add_argument('spot_id', type=int, required=True)
         args = parser.parse_args()
 
-        start_time = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        IST = timezone(timedelta(hours=5, minutes=30))
+        start_time = datetime.now(IST)
 
         vehicle = Vehicle.query.filter_by(id=args['vehicle_id'], user_id=current_user.id).first()
         if not vehicle:
@@ -511,7 +523,7 @@ class BookingResource(Resource):
         if not spot:
             abort(404, message="Parking spot not found.")
 
-        if spot.is_occupied:
+        if spot.status == 'occupied':
             abort(409, message="This spot is already marked as occupied.")
 
         # Check active overlapping bookings
@@ -529,6 +541,19 @@ class BookingResource(Resource):
         if vehicle_conflict:
             abort(409, message="This vehicle already has an active booking.")
 
+        # Check and remove active reservation (if any)
+        active_reservation = Reservation.query.filter(
+            Reservation.vehicle_id == vehicle.id,
+            Reservation.expires_at > start_time
+        ).first()
+
+        if active_reservation:
+            reserved_spot = active_reservation.spot
+            if reserved_spot:
+                reserved_spot.status = 'available'
+            db.session.delete(active_reservation)
+
+        # Create booking
         booking = Booking(
             vehicle_id=vehicle.id,
             spot_id=spot.id,
@@ -536,13 +561,15 @@ class BookingResource(Resource):
             end_time=None
         )
 
-        spot.is_occupied = True  # ✅ Mark spot as occupied
+        spot.is_occupied = True
+        spot.status = 'occupied'
 
         db.session.add(booking)
         db.session.commit()
         cache.delete_memoized(self.get)
 
         return {"message": "Booking started successfully.", "booking_id": booking.id}, 201
+
 
 
     @token_required
@@ -560,12 +587,118 @@ class BookingResource(Resource):
             abort(403, message="You are not authorized to delete this booking.")
 
         booking.spot.is_occupied = False
+        booking.spot.status = 'available'
 
         db.session.delete(booking)
         db.session.commit()
         cache.delete_memoized(self.get)
 
         return {"message": "Booking cancelled successfully."}, 200
+
+class ReservationResource(Resource):
+    @token_required
+    @cache.memoize(timeout = 5)
+    def get(self):
+        current_user = g.current_user
+        user_vehicle_ids = [v.id for v in current_user.vehicles]
+
+        reservations = Reservation.query.filter(Reservation.vehicle_id.in_(user_vehicle_ids)).all()
+
+        result = []
+        for r in reservations:
+            spot = r.spot
+            lot = spot.lot if spot else None
+
+            result.append({
+                    "id": r.id,
+                    "start_time": r.created_at.isoformat(),
+                    "end_time": r.expires_at.isoformat() if r.expires_at else None,
+                    "vehicle_id": r.vehicle_id,
+                    "vehicle_number": r.vehicle.license_plate,
+                    "spot_id": r.spot_id,
+                    "created_at": r.created_at.isoformat(),
+                    "spot_number": spot.spot_number if spot else "Deleted Spot",
+                    "spot_type": spot.spot_type if spot else "N/A",
+                    "lot_id": lot.id if lot else None,
+                    "prime_location_name": lot.prime_location_name if lot else "Unknown",
+                    "address": lot.address if lot else "Unknown Address",
+                    "pin_code": lot.pin_code if lot else "Unknown",
+                    "status": "active",
+                    "price": 0,
+                    "is_reservation": True
+                })
+
+        return result, 200
+    
+
+    @token_required
+    def post(self):
+        current_user = g.current_user
+        parser = reqparse.RequestParser()
+        parser.add_argument('vehicle_id', type=int, required=True)
+        parser.add_argument('spot_id', type=int, required=True)
+        args = parser.parse_args()
+
+        vehicle = Vehicle.query.filter_by(id=args['vehicle_id'], user_id=current_user.id).first()
+        if not vehicle:
+            abort(403, message="Invalid vehicle.")
+
+        spot = ParkingSpot.query.get(args['spot_id'])
+        if not spot or spot.status != 'available':
+            abort(409, message="Spot is not available for reservation.")
+
+        # Check for existing active reservation for this vehicle
+        existing_reservation = Reservation.query.filter(
+            Reservation.vehicle_id == vehicle.id,
+            Reservation.expires_at > datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        ).first()
+        if existing_reservation:
+            abort(409, message="This vehicle already has an active reservation.")
+
+        created_at = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        expires_at = datetime.now(timezone(timedelta(hours=5, minutes=30))) + timedelta(minutes=30)
+
+        reservation = Reservation(
+            vehicle_id=vehicle.id,
+            spot_id=spot.id,
+            created_at = created_at,
+            expires_at=expires_at
+        )
+
+        spot.status = 'reserved'
+
+        db.session.add(reservation)
+        db.session.commit()
+
+        return {"message": "Spot reserved.", "reservation_id": reservation.id, "expires_at": expires_at.isoformat()}, 201
+    
+    @token_required
+    def delete(self):
+        current_user = g.current_user
+
+        parser = reqparse.RequestParser()
+        parser.add_argument('vehicle_id', type=int, required=True)
+        args = parser.parse_args()
+
+        # Get active reservation for this user's vehicle
+        reservation = Reservation.query.join(Vehicle).filter(
+            Vehicle.user_id == current_user.id,
+            Reservation.vehicle_id == args['vehicle_id'],
+            Reservation.expires_at > datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        ).first()
+
+        if not reservation:
+            abort(404, message="No active reservation found for this vehicle.")
+
+        spot = reservation.spot
+        if spot:
+            spot.status = 'available'
+            spot.is_occupied = False
+
+        db.session.delete(reservation)
+        db.session.commit()
+
+        return {"message": "Reservation cancelled successfully."}, 200
 
 
 
@@ -588,6 +721,7 @@ class BookingReleaseResource(Resource):
 
         # ✅ Free the spot when booking is released
         booking.spot.is_occupied = False
+        booking.spot.status = "available"
 
         db.session.commit()
 
@@ -609,7 +743,10 @@ class UserLotsResource(Resource):
         for lot in lots:
             total_spots = len(lot.spots)
             occupied_spots = ParkingSpot.query.filter_by(lot_id=lot.id, is_occupied=True).count()
-            available_spots = total_spots - occupied_spots
+            reserved_spots = ParkingSpot.query.filter_by(lot_id=lot.id, status='reserved').count()
+
+            available_spots = total_spots - occupied_spots - reserved_spots
+
 
             lot_list.append({
                 'id': lot.id,
@@ -619,7 +756,8 @@ class UserLotsResource(Resource):
                 'price': lot.price,
                 'number_of_spots': total_spots,
                 'occupied_spots': occupied_spots,
-                'available_spots': available_spots
+                'available_spots': available_spots,
+                'reserved_spots': reserved_spots
             })
 
         return lot_list, 200

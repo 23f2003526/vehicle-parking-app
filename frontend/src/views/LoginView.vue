@@ -40,6 +40,9 @@ const handleSubmit = async () => {
       <input v-model="form.password" type="password" placeholder="Password" required />
 
       <button type="submit">Log In</button>
+      <router-link to="/signup" class="signup-link">
+        Go to Signup instead
+      </router-link>
     </form>
   </div>
 </template>
@@ -104,5 +107,13 @@ button:hover {
 
 button:active {
   transform: translateY(1px);
+}
+
+.signup-link {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  color: rgb(253, 100, 62);
+  text-decoration: underline;
 }
 </style>

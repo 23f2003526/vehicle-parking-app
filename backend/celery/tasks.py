@@ -1,19 +1,19 @@
 from celery import shared_task
 import time
-from backend.models import User, Booking, Vehicle, ParkingSpot, ParkingLot
+from backend.models import Reservation, User, Booking, Vehicle, ParkingSpot, ParkingLot
 from sqlalchemy.orm import joinedload
 # from main import db
 from flask import current_app
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import os
 import flask_excel as excel
 from pyexcel import save_as
 from backend.celery.mail_service import send_email
 
-@shared_task(ignore_result = False)
-def add(x,y):
-    time.sleep(20)
-    return x+y
+# @shared_task(ignore_result = False)
+# def add(x,y):
+#     time.sleep(20)
+#     return x+y
 
 
 @shared_task(ignore_result=False)
@@ -80,3 +80,18 @@ def create_csv(user_id):
 @shared_task(ignore_result = True)
 def email_reminder(to, subject, content):
     send_email(to, subject, content)
+
+@shared_task(ignore_result = True)
+def expire_stale_reservations():
+    from main import db
+    
+    now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+    stale_reservations = Reservation.query.filter(Reservation.expires_at <= now).all()
+    
+    print(f"Now: {now}, Stale: {stale_reservations}")
+
+    for res in stale_reservations:
+        res.spot.status = 'available'
+        db.session.delete(res)
+
+    db.session.commit()

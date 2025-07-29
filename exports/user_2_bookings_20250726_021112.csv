@@ -1,6 +1,0 @@
-address,created_at,end_time,id,location_name,lot_id,pin_code,price,spot_id,spot_number,spot_type,start_time,status,vehicle_id,vehicle_number
-Unknown Address,2025-07-21T20:04:39.293609,2025-07-22T01:35:17.851065,1,Unknown,,Unknown,0,,Deleted Spot,N/A,2025-07-22T01:34:39.288844,completed,1,ASDFAD234
-Unknown Address,2025-07-21T20:14:31.158272,2025-07-22T01:45:28.183893,2,Unknown,,Unknown,0,,Deleted Spot,N/A,2025-07-22T01:44:31.153405,completed,2,TEST123123
-asdf,2025-07-21T20:14:52.335620,2025-07-22T01:46:40.388322,3,test2,2,110023,12.0,16,1,compact,2025-07-22T01:44:52.333712,completed,1,ASDFAD234
-test,2025-07-25T09:57:04.725103,2025-07-25T15:27:31.083701,9,test,1,110058,20.0,64,1,compact,2025-07-25T15:27:04.717599,completed,1,ASDFAD234
-asdf,2025-07-25T09:57:43.297894,2025-07-25T15:27:45.715614,10,test2,2,110023,12.0,23,8,compact,2025-07-25T15:27:43.295587,completed,1,ASDFAD234

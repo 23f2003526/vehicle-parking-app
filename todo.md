@@ -1,6 +1,14 @@
 # TO DO
 
 - celery -A main:celery_app worker -l INFO
+- celery -A main:celery_app beat -l INFO
+- ~/go/bin/MailHog
+
+- Fix the bug that user can reserve an already Parked vehicle. (and vice versa?)
+
+- ParkingLotView -> OpenOccupiedDetails -> Fix it so reserved main it shows details of user who reserved it.
+- thinking whether to include a status in parking_spot : occupied, available and reserved. Cost calculation only starts when the status is changed from reserved to occupied.
+
 - add amount paid column in Bookings Table.. update it when user clicks release. Display it in csv file generated.
 - fix login and logout in navbar.
 - do I make a new component for ShowBookings.vue?

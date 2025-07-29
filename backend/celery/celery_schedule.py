@@ -1,8 +1,8 @@
 from celery.schedules import crontab
 from flask import current_app as app
-from backend.celery.tasks import email_reminder
+from backend.celery.tasks import email_reminder, expire_stale_reservations
 from backend.models import User
-from backend.mail_templates import render_monthly_report_html
+from backend.utils.email_templates import render_daily_reminder_html
 
 celery_app = app.extensions['celery']
 
@@ -32,6 +32,10 @@ def setup_periodic_tasks(sender, **kwargs):
     # monthly messages
     sender.add_periodic_task(crontab(minute=30, hour=18, day_of_week='*', day_of_month=1, month_of_year='*', ), email_reminder.s('students@gmail.com', 'this is subject', '<h1>put something relevant here</h1>'), name='monthly reminder')
 
+@celery_app.on_after_configure.connect
+def setup_periodic_tasks(sender, **kwargs):
+    # Every 5 minutes
+    sender.add_periodic_task(crontab(minute='*/5'), expire_stale_reservations.s(), name='expire stale reservations')
 
 
 
