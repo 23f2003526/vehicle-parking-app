@@ -19,6 +19,17 @@ const userStore = useUserStore()
 const isAdmin = computed(() => userStore.isAdmin)
 
 onMounted(async () => {
+
+    try {
+        const userResponse = await axios.get('/api/dashboard')
+        userStore.setUserDetails(userResponse.data)
+    } catch (error) {
+        toast.error("Session Expired. Login Again.")
+        userStore.logout()
+        router.push('/login')
+        return
+    }
+
     try {
         const response = await axios.get(`/api/lots/${id}/summary`)
         lot.value = response.data
@@ -121,8 +132,22 @@ const openOccupiedDetails = async () => {
 }
 
 const openReservedDetails = async () => {
-
+    loadingOccupied.value = true
+    try {
+        const res = await axios.get(
+            `/api/admin/lots/${id}/spots/${selectedSpot.value.spot_number}/active-reservation`
+        )
+        occupiedDetails.value = res.data
+        showOccupiedModal.value = true
+    } catch (err) {
+        toast.error(
+            err.response?.data?.message || 'Failed to fetch reserved details'
+        )
+    } finally {
+        loadingOccupied.value = false
+    }
 }
+
 
 const closeOccupiedModal = () => {
     showOccupiedModal.value = false

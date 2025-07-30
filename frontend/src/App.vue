@@ -8,4 +8,8 @@ import Navbar from '@/components/Navbar.vue';
   <RouterView />
 </template>
 
-<style scoped></style>
+<style scoped>
+* {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+</style>

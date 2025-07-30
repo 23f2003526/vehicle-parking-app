@@ -160,4 +160,13 @@ async function handleExport() {
     /* border: 2px solid red; */
     margin: 1% 2% 0 2%;
 }
+
+.export-btn {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin: 3px;
+}
 </style>

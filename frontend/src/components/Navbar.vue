@@ -2,11 +2,9 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const route = useRoute()
 
 const goTo = (path) => {
     router.push(path)
@@ -16,23 +14,26 @@ const logout = () => {
     userStore.logout()
     router.push('/login')
 }
-
-const hideNavLinks = computed(() =>
-    route.name === 'login' || route.name === 'signup'
-)
-
 </script>
 
 <template>
     <nav class="navbar">
-        <h1 @click="goTo('/dashboard')" class="nav-title">
-            ParkEasy
-        </h1>
+        <div v-if="userStore.isLoggedIn">
+            <h1 @click="goTo('/dashboard')" class="nav-title">
+                ParkEasy
+            </h1>
+        </div>
 
-        <div v-if="!hideNavLinks">
+        <div v-else>
+            <h1 @click="goTo('/')" class="nav-title">
+                ParkEasy
+            </h1>
+        </div>
+
+        <div v-if="userStore.isLoggedIn">
             <div class="nav-content">
-                <span class="welcome-message"> Welcome
-                    {{ userStore.isAdmin ? 'Admin' : userStore.details.name }}
+                <span class="welcome-message">
+                    Welcome {{ userStore.isAdmin ? 'Admin' : userStore.details.name }}
                 </span>
 
                 <div class="nav-links">
@@ -40,14 +41,25 @@ const hideNavLinks = computed(() =>
                     <button v-if="userStore.isAdmin" @click="goTo('/admin/users')" class="nav-button">Users</button>
                     <button v-if="userStore.isAdmin" @click="goTo('/admin/bookings')"
                         class="nav-button">Bookings</button>
-                    <button @click="goTo('/summary')" class="nav-button">Summary</button>
+                    <button v-if="userStore.isAdmin" @click="goTo('/admin/summary')" class="nav-button">Summary</button>
+                    <button v-if="!userStore.isAdmin" @click="goTo('/summary')" class="nav-button">Summary</button>
+
                     <button @click="goTo('/edit-profile')" class="nav-button">Edit Profile</button>
                     <button @click="logout" class="nav-button logout-button">Logout</button>
                 </div>
             </div>
         </div>
+
+        <div v-else>
+            <div class="nav-actions">
+                <button @click="goTo('/login')" class="nav-btn">Login</button>
+                <button @click="goTo('/signup')" class="nav-btn primary">Sign Up</button>
+            </div>
+        </div>
+
     </nav>
 </template>
+
 
 <style scoped>
 .navbar {
@@ -105,6 +117,30 @@ const hideNavLinks = computed(() =>
 .nav-button:hover {
     background: #f5f5f5;
     color: #1a1a1a;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: 1px solid #007bff;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #007bff;
+    font-size: 14px;
+}
+
+.nav-btn.primary {
+    background: #007bff;
+    color: white;
+}
+
+.nav-btn:hover {
+    opacity: 0.85;
 }
 
 .logout-button {

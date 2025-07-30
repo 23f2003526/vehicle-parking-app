@@ -48,6 +48,8 @@ class ParkingLot(db.Model):
     pin_code = db.Column(db.String(10), nullable=False)
     number_of_spots = db.Column(db.Integer, nullable=False)
 
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone(timedelta(hours=5, minutes=30))))
+
     spots = db.relationship('ParkingSpot', backref='lot', lazy=True, cascade='all, delete-orphan')
 
 

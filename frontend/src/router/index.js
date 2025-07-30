@@ -9,6 +9,9 @@ import CreateParkingLotView from '@/views/CreateParkingLotView.vue';
 import EditParkingLotView from '@/views/EditParkingLotView.vue';
 import UsersView from '@/views/UsersView.vue';
 import BookingsView from '@/views/BookingsView.vue';
+import AdminSummaryView from '@/views/AdminSummaryView.vue';
+import UserSummaryView from '@/views/UserSummaryView.vue';
+import EditProfileView from '@/views/EditProfileView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -69,6 +72,24 @@ const router = createRouter({
       component: BookingsView,
       meta: { requiresAuth: true}
     },
+    {
+      path: '/admin/summary',
+      name : 'admin-summary',
+      component: AdminSummaryView,
+      meta: {requiresAuth: true}
+    },
+    {
+      path: '/summary',
+      name : 'user-summary',
+      component: UserSummaryView,
+      meta: {requiresAuth: true}
+    },
+    {
+      path: '/edit-profile',
+      name : 'edit-profile',
+      component : EditProfileView,
+      meta : {requiresAuth: true}
+    }
   ],
 })
 

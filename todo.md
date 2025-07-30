@@ -4,22 +4,8 @@
 - celery -A main:celery_app beat -l INFO
 - ~/go/bin/MailHog
 
-- Fix the bug that user can reserve an already Parked vehicle. (and vice versa?)
-
-- ParkingLotView -> OpenOccupiedDetails -> Fix it so reserved main it shows details of user who reserved it.
-- thinking whether to include a status in parking_spot : occupied, available and reserved. Cost calculation only starts when the status is changed from reserved to occupied.
-
-- add amount paid column in Bookings Table.. update it when user clicks release. Display it in csv file generated.
-- fix login and logout in navbar.
-- do I make a new component for ShowBookings.vue?
-- fix the delete and edit button disappearing issue when reloading in ParkingLotView.vue
-
-- add links so user can switch from login and signup
-
-- complete models.py
-- watch live session 3 from YT.
-
-- ADMIN ENDPOINTS: WHAT's LEFT :: Admin should be able to see list of all users and their details. (username, spot used, reservation history etc.)
+- project file
+- video
 
 # DONE
 
@@ -36,3 +22,27 @@
 ### I am now using Pinia.
 
 - Call a Flask route like /export-parking-csv (POST) in frontend. After it is downloaded, send an alert to user.
+
+- add amount paid column in Bookings Table.. update it when user clicks release. Display it in csv file generated.
+- add links so user can switch from login and signup
+
+- complete models.py
+- watch live session 3 from YT.
+
+- ADMIN ENDPOINTS: WHAT's LEFT :: Admin should be able to see list of all users and their details. (username, spot used, reservation history etc.)
+- do I make a new component for ShowBookings.vue?
+- ParkingLotView -> OpenOccupiedDetails -> Fix it so reserved main it shows details of user who reserved it.
+- thinking whether to include a status in parking_spot : occupied, available and reserved. Cost calculation only starts when the status is changed from reserved to occupied.
+
+- Summary
+- Edit Profile
+
+- Navbar (somewhat, not optimized at all)
+
+- Landing Page
+
+- celery tasks
+- fix the delete and edit button disappearing issue when reloading in ParkingLotView.vue
+- fix login and logout in navbar.
+
+- Fix the bug that user can reserve an already Parked vehicle. (and vice versa?)

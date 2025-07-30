@@ -15,6 +15,15 @@ const userStore = useUserStore()
 const toast = useToast()
 
 onMounted(async () => {
+    try {
+        const userResponse = await axios.get('/api/dashboard')
+        userStore.setUserDetails(userResponse.data)
+    } catch (error) {
+        toast.error("Session Expired. Login Again.")
+        userStore.logout()
+        router.push('/login')
+        return
+    }
     if (!userStore.isAdmin) {
         router.push('/unauthorized')
         return

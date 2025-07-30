@@ -125,9 +125,21 @@ class Login(Resource):
     
 # api.add_resource(Login, '/login')
 
-# class Logout(Resource):
-#     def get(self):
-#         return {}
+class Logout(Resource):
+    def post(self):
+        response = make_response(jsonify({'message': 'Logged out successfully'}))
+        
+        # Clear the jwt_token cookie
+        response.set_cookie(
+            'jwt_token', 
+            '', 
+            expires=0,
+            httponly=True,
+            secure=True,  # Set to False if not using HTTPS in development
+            samesite='Strict'
+        )
+        
+        return response
 
 class Dashboard(Resource):
     @token_required
@@ -393,6 +405,44 @@ class ActiveBookingResource(Resource):
             "start_time": active_booking.start_time.isoformat(),
             "estimated_cost": estimated_cost
         }, 200
+    
+class ActiveReservationResource(Resource):
+    @admin_required
+    def get(self, lot_id, spot_number):
+        # Find the parking spot
+        spot = ParkingSpot.query.filter_by(lot_id=lot_id, spot_number=spot_number).first()
+        if not spot:
+            abort(404, message="Parking spot not found")
+
+        # Check if spot is in reserved state
+        if spot.status != 'reserved':
+            abort(400, message="Spot is not currently marked as reserved")
+
+        # Find the active reservation (not expired)
+        IST = timezone(timedelta(hours=5, minutes=30))
+        now = datetime.now(IST)
+
+        active_reservation = Reservation.query.filter(
+            Reservation.spot_id == spot.id,
+            Reservation.expires_at > now
+        ).first()
+
+        if not active_reservation:
+            abort(404, message="No active reservation found for this spot")
+
+        # Get the associated vehicle
+        vehicle = active_reservation.vehicle
+        if not vehicle:
+            abort(404, message="Vehicle associated with this reservation not found")
+
+        return {
+            "spot_id": spot.id,
+            "customer_id": vehicle.user_id,
+            "vehicle_number": vehicle.license_plate,
+            "reservation_time": active_reservation.created_at.isoformat(),
+            "expires_at": active_reservation.expires_at.isoformat()
+        }, 200
+
 
     
 # api.add_resource(SpotResource, '/admin/lots/<int:lot_id>/spots/<int:spot_number>')
@@ -523,8 +573,18 @@ class BookingResource(Resource):
         if not spot:
             abort(404, message="Parking spot not found.")
 
+        # is spot occupied?
         if spot.status == 'occupied':
             abort(409, message="This spot is already marked as occupied.")
+
+        # is spot already reserved by someone else?
+        reserved_by_other = Reservation.query.filter(
+            Reservation.spot_id == spot.id,
+            Reservation.expires_at > start_time,
+            Reservation.vehicle_id != vehicle.id
+        ).first()
+        if reserved_by_other:
+            abort(409, message="This spot is already reserved by another vehicle.")
 
         # Check active overlapping bookings
         overlapping = Booking.query.filter(
@@ -541,12 +601,20 @@ class BookingResource(Resource):
         if vehicle_conflict:
             abort(409, message="This vehicle already has an active booking.")
 
+        vehicle_reservation_conflict = Reservation.query.filter(
+            Reservation.vehicle_id == vehicle.id,
+            Reservation.spot_id != spot.id,
+            Reservation.expires_at > start_time
+        ).first()
+        if vehicle_reservation_conflict:
+            abort(409, message="This vehicle already has an active reservation.")
+
         # Check and remove active reservation (if any)
         active_reservation = Reservation.query.filter(
             Reservation.vehicle_id == vehicle.id,
+            Reservation.spot_id == spot.id,
             Reservation.expires_at > start_time
         ).first()
-
         if active_reservation:
             reserved_spot = active_reservation.spot
             if reserved_spot:
@@ -646,10 +714,27 @@ class ReservationResource(Resource):
         spot = ParkingSpot.query.get(args['spot_id'])
         if not spot or spot.status != 'available':
             abort(409, message="Spot is not available for reservation.")
+        
+        # Spot already reserved
+        existing_spot_reservation = Reservation.query.filter(
+            Reservation.spot_id == spot.id,
+            Reservation.expires_at > datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        ).first()
+        if existing_spot_reservation:
+            abort(409, message="Spot is already reserved by someone.")
 
-        # Check for existing active reservation for this vehicle
+        # Vehicle already has active booking
+        vehicle_booking_conflict = Booking.query.filter(
+            Booking.vehicle_id == vehicle.id,
+            Booking.end_time == None
+        ).first()
+        if vehicle_booking_conflict:
+            abort(409, message="This vehicle already has an active booking.")
+
+        # Vehicle already has active reservation
         existing_reservation = Reservation.query.filter(
             Reservation.vehicle_id == vehicle.id,
+            Reservation.spot_id != spot.id,
             Reservation.expires_at > datetime.now(timezone(timedelta(hours=5, minutes=30)))
         ).first()
         if existing_reservation:
@@ -811,3 +896,52 @@ class AdminBookingResource(Resource):
 
         return result, 200
 
+class ProfileResource(Resource):
+    @token_required
+    def get(self):
+        current_user_id = g.current_user.id
+        
+        user = User.query.filter_by(id=current_user_id).first_or_404()
+
+        return{
+            "name" : user.name,
+            "email" : user.email
+        } , 200
+    
+    @token_required
+    def put(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('name', type=str, required=True)
+        parser.add_argument('email', type=str, required=True)
+        parser.add_argument('old_password', type=str, required=True)
+        parser.add_argument('new_password', type=str, required=False)
+        args = parser.parse_args()
+
+        user = g.current_user
+
+        if not check_password_hash(user.password, args['old_password']):
+            return {"message": "Current password is incorrect."}, 400
+        
+        existing_user = User.query.filter(User.email == args['email'], User.id != user.id).first()
+        if existing_user:
+            return {"message": "Email is already in use."}, 409
+        
+        user.name = args['name']
+        user.email = args['email']
+
+        if args['new_password']:
+            user.password = generate_password_hash(args['new_password'])
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {"message": "Failed to update profile. Please try again."}, 500
+
+        return {
+            "message": "Profile updated successfully.",
+            "user": {
+                "name": user.name,
+                "email": user.email
+            }
+        }, 200

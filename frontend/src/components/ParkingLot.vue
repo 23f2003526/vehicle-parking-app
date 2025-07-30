@@ -13,7 +13,7 @@ defineProps({
         <p class="lot-address">{{ lot.address }}, {{ lot.pin_code }}</p>
         <div class="lot-details">
             <p class="lot-price">₹{{ lot.price }}/hr</p>
-            <p class="lot-occupancy">{{ lot.occupied_spots }}/{{ lot.number_of_spots }} spots</p>
+            <p class="lot-occupancy">{{ lot.occupied_spots + lot.reserved_spots }}/{{ lot.number_of_spots }} spots</p>
         </div>
     </div>
 </template>
