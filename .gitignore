@@ -1,6 +1,9 @@
 # config.py
 .venv
 migrations
+node_modules/
+celerybeat-schedule
+exports/*
 
 # ───── Python / Flask ─────
 __pycache__/

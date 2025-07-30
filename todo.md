@@ -4,6 +4,7 @@
 - celery -A main:celery_app beat -l INFO
 - ~/go/bin/MailHog
 
+- yaml file
 - project file
 - video
 
