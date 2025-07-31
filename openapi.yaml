@@ -1,0 +1,297 @@
+swagger: '2.0'
+basePath: /
+paths: !!python/object/apply:collections.OrderedDict
+- - - /admin/bookings
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_admin_booking_resource
+        tags:
+        - default
+  - - /admin/lots
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_lot_get_create
+        tags:
+        - default
+      post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_lot_get_create
+        tags:
+        - default
+  - - /admin/lots/{lot_id}
+    - parameters:
+      - name: lot_id
+        in: path
+        required: true
+        type: integer
+      get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_lot_update_delete
+        tags:
+        - default
+      delete:
+        responses:
+          '200':
+            description: Success
+        operationId: delete_lot_update_delete
+        tags:
+        - default
+      put:
+        responses:
+          '200':
+            description: Success
+        operationId: put_lot_update_delete
+        tags:
+        - default
+  - - /admin/lots/{lot_id}/spots/{spot_number}
+    - parameters:
+      - name: lot_id
+        in: path
+        required: true
+        type: integer
+      - name: spot_number
+        in: path
+        required: true
+        type: integer
+      get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_spot_resource
+        tags:
+        - default
+      delete:
+        responses:
+          '200':
+            description: Success
+        operationId: delete_spot_resource
+        tags:
+        - default
+      put:
+        responses:
+          '200':
+            description: Success
+        operationId: put_spot_resource
+        tags:
+        - default
+  - - /admin/lots/{lot_id}/spots/{spot_number}/active-booking
+    - parameters:
+      - name: lot_id
+        in: path
+        required: true
+        type: integer
+      - name: spot_number
+        in: path
+        required: true
+        type: string
+      get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_active_booking_resource
+        tags:
+        - default
+  - - /admin/lots/{lot_id}/spots/{spot_number}/active-reservation
+    - parameters:
+      - name: lot_id
+        in: path
+        required: true
+        type: integer
+      - name: spot_number
+        in: path
+        required: true
+        type: string
+      get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_active_reservation_resource
+        tags:
+        - default
+  - - /admin/users
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_users
+        tags:
+        - default
+  - - /bookings
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_booking_resource
+        tags:
+        - default
+      post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_booking_resource
+        tags:
+        - default
+      delete:
+        responses:
+          '200':
+            description: Success
+        operationId: delete_booking_resource
+        tags:
+        - default
+  - - /bookings/{booking_id}/release
+    - parameters:
+      - name: booking_id
+        in: path
+        required: true
+        type: integer
+      patch:
+        responses:
+          '200':
+            description: Success
+        operationId: patch_booking_release_resource
+        tags:
+        - default
+  - - /dashboard
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_dashboard
+        tags:
+        - default
+  - - /login
+    - post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_login
+        tags:
+        - default
+  - - /logout
+    - post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_logout
+        tags:
+        - default
+  - - /lots
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_user_lots_resource
+        tags:
+        - default
+  - - /lots/{lot_id}/summary
+    - parameters:
+      - name: lot_id
+        in: path
+        required: true
+        type: integer
+      get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_lot_summary
+        tags:
+        - default
+  - - /reservations
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_reservation_resource
+        tags:
+        - default
+      post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_reservation_resource
+        tags:
+        - default
+      delete:
+        responses:
+          '200':
+            description: Success
+        operationId: delete_reservation_resource
+        tags:
+        - default
+  - - /signup
+    - post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_signup
+        tags:
+        - default
+  - - /vehicles
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_vehicle_resource
+        tags:
+        - default
+      post:
+        responses:
+          '200':
+            description: Success
+        operationId: post_vehicle_resource
+        tags:
+        - default
+      delete:
+        responses:
+          '200':
+            description: Success
+        operationId: delete_vehicle_resource
+        tags:
+        - default
+      put:
+        responses:
+          '200':
+            description: Success
+        operationId: put_vehicle_resource
+        tags:
+        - default
+  - - /whoami
+    - get:
+        responses:
+          '200':
+            description: Success
+        operationId: get_profile_resource
+        tags:
+        - default
+      put:
+        responses:
+          '200':
+            description: Success
+        operationId: put_profile_resource
+        tags:
+        - default
+info:
+  title: ParkEasy API
+  version: '1.0'
+  description: Vehicle Parking Management System API
+produces:
+- application/json
+consumes:
+- application/json
+tags:
+- name: default
+  description: Default namespace
+responses:
+  ParseError:
+    description: When a mask can't be parsed
+  MaskError:
+    description: When any error occurs on mask
+host: localhost:5000
