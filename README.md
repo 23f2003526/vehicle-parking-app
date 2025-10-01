@@ -1,4 +1,4 @@
-# 🚗 vehicle-parking-app
+#🚗 vehicle-parking-app
 
 **MAD II Project**
 Platform: **Linux-based systems**
