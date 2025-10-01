@@ -1,0 +1,39 @@
+name: Vue.js Cache Demo
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # Cache node_modules
+      - name: prime-cache-3947f84
+        id: cache-step
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: cache-3947f84
+
+      - name: Echo cache result
+        run: echo "Cache hit? ${{ steps.cache-step.outputs.cache-hit }}"
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Build Vue.js project
+      - name: Build project
+        run: npm run build
